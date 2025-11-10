@@ -380,6 +380,10 @@
         #labels-toggle-btn.labels-on { background-color: #f59e0b !important; color: white !important; }
         #labels-toggle-btn.labels-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
         #labels-toggle-btn.labels-off:hover { background-color: #e5e7eb !important; }
+        /* (*** MỚI v45 ***) CSS cho Nút Bật/Tắt NHNN */
+        #nhnn-toggle-btn.nhnn-on { background-color: #059669 !important; color: white !important; } /* Màu xanh lá cây */
+        #nhnn-toggle-btn.nhnn-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+        #nhnn-toggle-btn.nhnn-off:hover { background-color: #e5e7eb !important; }
         /* Toastify */
         .custom-toast { font-family: 'Times New Roman', Times, serif !important; font-size: 14px !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important; }
         .custom-toast.success { background: linear-gradient(135deg, #10b981, #059669) !important; }
@@ -534,16 +538,183 @@
             margin-top: -25px;
             font-size: 16px;
         }
+/* (*** MỚI v49 ***) CSS cho Nút Toggle Panel Chính (Nút Hamburger) */
+        #panel-toggle-btn {
+            width: 100%;
+            height: 100%;
+            font-size: 18px !important;
+            background-color: #059669 !important; /* (SỬA v49) MÀU XANH LÁ */
+            color: white !important;             /* (SỬA v49) MÀU TRẮNG */
+            border-radius: 8px; /* Khớp với container */
+            border: none !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #panel-toggle-btn:hover {
+            background-color: #047857 !important; /* (SỬA v49) Xanh đậm hơn */
+        }
 
+        /* (*** MỚI v49 ***) CSS cho Nút Thu Gọn (Collapse) */
+        #panel-collapse-btn { 
+            background-color: #6b7280 !important; 
+            color: white !important; 
+            /* (SỬA v49) Căn giữa icon (vì không còn chữ) */
+            justify-content: center !important; 
+            padding-left: 0 !important;
+        }
+        #panel-collapse-btn:hover { background-color: #4b5563 !important; }
+
+
+        /* (*** MỚI v47 ***) CSS Ẩn/Hiện Wrapper chứa các nút */
+        .buttons-wrapper {
+            display: block; /* Hiển thị mặc định (cho desktop) */
+        }
+        
+        /* === (SỬA v49) CSS MỚI (Áp dụng cho TẤT CẢ màn hình) === */
+        
+        /* 1. Panel Bảng Xếp Hạng: LUÔN Ở BÊN TRÁI */
+        /* (Vị trí gốc được giữ nguyên) */
+
+
+        /* 2. Panel Filter: (SỬA v49) LUÔN Ở BÊN PHẢI */
+        #filter-controls-container {
+            right: 10px;    /* (SỬA v49) Chuyển sang phải */
+            left: auto;     /* (SỬA v49) Hủy bên trái */
+            z-index: 1003;  /* (SỬA v49) Nổi lên trên cùng */
+        }
+
+        
+        /* 3. Panel Nút Bấm: LUÔN ở góc TRÊN bên phải */
+        .leaflet-top.leaflet-right {
+            top: 10px;
+            bottom: auto; 
+            right: 10px;
+            /* (MỚI v49) Đảm bảo menu ☰ (z-1000) nằm dưới Filter (z-1003) */
+            z-index: 1000; 
+        }
+        
+        /* 4. Panel chính (custom-controls-container) LUÔN là nút ☰ */
+        .custom-controls-container {
+            width: 40px; /* Kích thước nút toggle */
+            height: 40px;
+            padding: 0; /* Xóa padding */
+            overflow: hidden; /* Ẩn các nút con */
+            background: transparent; /* Tắt nền trắng của panel */
+            border: none; /* Tắt viền của panel */
+            box-shadow: none; /* Tắt bóng của panel */
+        }
+
+        /* 5. Panel chính khi được BẬT (expanded) */
+        .custom-controls-container.expanded {
+            width: 180px; /* (SỬA v49) DÀI RA CHÚT (từ 150px) */
+            height: auto;
+            padding: 8px; /* Thêm lại padding */
+            background: rgba(255, 255, 255, 0.9); /* Thêm lại nền */
+            border: 1px solid #ccc; /* Thêm lại viền */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Thêm lại bóng */
+        }
+        
+        /* 6. Ẩn wrapper nút con MẶC ĐỊNH */
+        .buttons-wrapper {
+            display: none; 
+        }
+        
+        /* 7. Hiển thị wrapper khi panel được BẬT */
+        .custom-controls-container.expanded .buttons-wrapper {
+            display: block;
+        }
+
+        /* 8. Ẩn nút toggle (hamburger) khi panel được BẬT */
+        .custom-controls-container.expanded #panel-toggle-btn {
+            display: none;
+        }
+
+        /* 9. Hiển thị nút toggle (hamburger) MẶC ĐỊNH */
+        #panel-toggle-btn {
+            display: flex; /* Hiển thị nút hamburger */
+        }
+        
+        /* 10. Ẩn chữ (span) mặc định (khi co lại) */
+        .custom-controls-container .button-text {
+            display: none; 
+        }
+
+        /* 11. Hiển thị chữ khi panel bung ra */
+        .custom-controls-container.expanded .button-text {
+            display: inline; /* Hiện lại chữ */
+        }
+        
+        /* 12. Các nút con bên trong khi bung ra */
+        .custom-controls-container.expanded .leaflet-bar-part {
+            width: 100% !important; /* Các nút con 100% width */
+            height: 40px !important;
+            font-size: 16px !important;
+            /* (MỚI v49) Căn lề chữ cho đẹp (hết díu) */
+            justify-content: flex-start !important; 
+            padding-left: 10px !important;
+        }
+        
+        /* 13. Nút hamburger (khi chưa bung) */
+        #panel-toggle-btn.leaflet-bar-part {
+            width: 40px !important;
+            height: 40px !important;
+            font-size: 16px !important;
+            /* (MỚI v49) Ghi đè: Giữ nút ☰ ở giữa */
+            justify-content: center !important;
+            padding-left: 0 !important;
+        }
+
+        /* 14. (Ghi đè Desktop) Áp dụng luật mobile cho desktop */
+        @media (min-width: 769px) {
+            #panel-toggle-btn {
+                display: flex; /* (SỬA v48) Vẫn hiển thị nút ☰ */
+            }
+            .buttons-wrapper {
+                display: none; /* (SỬA v48) Vẫn ẩn wrapper */
+            }
+            /* (MỚI v49) Sửa lại panel Filter trên desktop */
+             #filter-controls-container {
+                width: 250px; /* Trả về độ rộng cũ */
+                right: 10px; /* Vẫn ở bên phải */
+                left: auto;
+            }
+        }
+        #close-filter-btn:hover {
+            color: #000;
+        }
+
+        /* (*** MỚI v50 ***) CSS cho nút đóng Bảng Xếp Hạng */
+        #close-rank-btn {
+            font-size: 24px;
+            font-weight: bold;
+            color: #777;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 5px;
+            float: right; /* Căn sang phải */
+        }
+        #close-rank-btn:hover {
+            color: #000;
+        }
+        
+        /* (SỬA v50) Sửa Header của Bảng Xếp Hạng để chứa nút X */
+         #rank-table-header {
+            /* ... (các style cũ giữ nguyên) ... */
+            display: block; /* Đảm bảo nút X (dùng float) hoạt động */
+         }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="rank-table-container">
-    <div id="rank-table-header">Bảng Xếp Hạng Lựa Chọn</div>
+    <div id="rank-table-header">
+        Bảng Xếp Hạng Lựa Chọn
+        <span id="close-rank-btn" 
+              onclick="event.stopPropagation(); closeRankPanel();"
+        >&times;</span>
+    </div>
     <div id="rank-table-body">
-        </div>
+    </div>
 </div>
 
 <div id="filter-controls-container">
@@ -617,12 +788,13 @@
     
     // (MỚI v37) Trạng thái xem Pin
     let isBatteryView = false;
-// (MỚI v43) Trạng thái hiển thị Nhãn KM
+    // (MỚI v43) Trạng thái hiển thị Nhãn KM
     let showDistanceLabels = true; // Mặc định là Bật
 
     // (SỬA v42) Biến trạng thái Bật/Tắt Gom Cụm
-    let isClusteringEnabled = true; // Mặc định là Bật
-
+    let isClusteringEnabled = false; // (SỬA v46) Mặc định là Tắt
+    // (*** MỚI v45 ***) Trạng thái hiển thị NHNN
+    let showNhnnMarkers = true; // Mặc định là Bật
 
     // (SỬA v42) Định nghĩa cả 2 lớp layer
     let clusterLayer = L.markerClusterGroup({
@@ -651,11 +823,14 @@
     
     let standardLayer = L.layerGroup(); // Lớp tiêu chuẩn (không gom)
     let analysisLayer = L.layerGroup().addTo(map);
+    // (*** MỚI v44 ***) Lớp layer riêng cho NHNN, không bao giờ bị gom cụm
+    let nhnnMarkersLayer = L.layerGroup().addTo(map);
+
     let previewLayer = L.layerGroup([], { interactive: false }).addTo(map);
 
     // (SỬA v42) pointMarkersLayer giờ là "con trỏ" chỉ đến lớp đang hoạt động
-    // Mặc định, nó trỏ vào clusterLayer
-    let pointMarkersLayer = clusterLayer; 
+    // (SỬA v46.1) Sửa lỗi: Phải trỏ vào layer chính xác dựa trên isClusteringEnabled
+    let pointMarkersLayer = isClusteringEnabled ? clusterLayer : standardLayer;
     
     // (SỬA v42) Thêm lớp layer mặc định (đang hoạt động) vào bản đồ
     map.addLayer(pointMarkersLayer);
@@ -799,7 +974,10 @@
             iconAnchor: [0, 0] // Căn vào tọa độ gốc
         });
     }
-/**
+
+    // (*** MỚI v48 ***) HÀM TOGGLE ĐÃ ĐƯỢC DI CHUYỂN RA ĐÚNG VỊ TRÍ
+    
+    /**
      * (MỚI v43) Hàm Bật/Tắt hiển thị nhãn khoảng cách (km)
      */
     function toggleDistanceLabels() {
@@ -811,84 +989,200 @@
 
         // 2. Cập nhật nút
         if (showDistanceLabels) {
-            button.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> Nhãn KM (Bật)';
+            button.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">Nhãn KM (Bật)</span>';
             button.classList.add('labels-on');
             button.classList.remove('labels-off');
             showToast("Đã BẬT: Hiển thị nhãn KM", 'info');
         } else {
             // (Sửa icon) Dùng fa-tag-slash cho đẹp hơn
-            button.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> Nhãn KM (Tắt)';
+            button.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> <span class="button-text">Nhãn KM (Tắt)</span>';
             button.classList.add('labels-off');
             button.classList.remove('labels-on');
             showToast("Đã TẮT: Hiển thị nhãn KM", 'warning');
         }
 
         // 3. Vẽ lại các nhóm
-        // drawAllGroups sẽ xóa và vẽ lại, tự động tôn trọng biến showDistanceLabels
         drawAllGroups();
         
         // 4. Xóa preview (nếu có) để nó tự vẽ lại đúng khi hover
         clearPreview();
     }
 
+    // (*** SỬA v50 ***) Sửa logic Bật/Tắt (Không đóng menu ☰)
+    function toggleRankPanel() {
+        const panel = document.getElementById('rank-table-container');
+        const button = document.getElementById('rank-toggle-btn');
+        if (!panel || !button) return;
+
+        // Lấy panel/nút của Filter
+        const filterPanel = document.getElementById('filter-controls-container');
+        const filterButton = document.getElementById('filter-toggle-btn');
+        
+        if (panel.style.display === 'block') {
+            // Đang Bật -> Tắt nó đi
+            panel.style.display = 'none';
+            button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; // Style Tắt
+        } else {
+            // Đang Tắt -> Bật nó lên
+            panel.style.display = 'block';
+            button.style.cssText = 'background-color: #3b82f6 !important; color: white !important;'; // Style Bật
+            
+            // (SỬA v50) Tắt panel kia (nếu đang mở)
+            if (filterPanel) filterPanel.style.display = 'none'; 
+            if (filterButton) filterButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; // Style Tắt
+        }
+        
+        // (*** LỖI ĐÃ XÓA ***) Không còn dòng code đóng menu ☰ ở đây
+    }
+
+    // (SỬA v50) Sửa logic Bật/Tắt (Không đóng menu ☰)
+    function toggleFilterControls() {
+        const controls = document.getElementById('filter-controls-container');
+        const button = document.getElementById('filter-toggle-btn');
+        if (!controls || !button) return;
+        
+        // Lấy panel/nút của Rank
+        const rankPanel = document.getElementById('rank-table-container');
+        const rankButton = document.getElementById('rank-toggle-btn');
+
+        if (controls.style.display === 'block') {
+            controls.style.display = 'none';
+            button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; // Style Tắt
+        } else {
+            controls.style.display = 'block';
+            button.style.cssText = 'background-color: #6b7280 !important; color: white !important;'; // Style Bật
+            
+            // (SỬA v50) Tắt panel kia (nếu đang mở)
+            if (rankPanel) rankPanel.style.display = 'none'; 
+            if (rankButton) rankButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; // Style Tắt
+        }
+        
+        // (*** LỖI ĐÃ XÓA ***) Không còn dòng code đóng menu ☰ ở đây
+    }
+    
     // --- 4. Thêm Nút điều khiển ---
     
-// (MỚI v38) Tạo một L.Control duy nhất chứa tất cả các nút
+   // (SỬA v50) Cập nhật Nút Thu Gọn + Style mặc định
     L.Control.MasterControls = L.Control.extend({
         onAdd: function(map) {
-            // Tạo container chính
+            // 1. Tạo container chính
             const container = L.DomUtil.create('div', 'leaflet-bar custom-controls-container');
             L.DomEvent.disableClickPropagation(container);
+            
+            // 2. (MỚI v47) Nút Bật/Tắt Panel (Hamburger)
+            const toggleButton = L.DomUtil.create('button', 'leaflet-bar-part', container);
+            toggleButton.id = 'panel-toggle-btn';
+            toggleButton.innerHTML = '<i class="fa-solid fa-bars"></i>'; // Icon Hamburger
+            
+            // (*** SỬA LỖI v48.1 ***)
+            toggleButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                // Logic Bật/Tắt class 'expanded' trên container chính
+                if (L.DomUtil.hasClass(container, 'expanded')) {
+                    L.DomUtil.removeClass(container, 'expanded');
+                } else {
+                    L.DomUtil.addClass(container, 'expanded');
+                }
+            };
+            // (*** HẾT SỬA LỖI ***)
+            
+            // 3. (MỚI v47) Wrapper cho tất cả các nút con
+            const buttonsWrapper = L.DomUtil.create('div', 'buttons-wrapper', container);
+            
+            // --- 4. Bắt đầu các nút con ---
+            
+            // (*** MỚI v50 ***) Nút ĐÓNG (Collapse) Panel
+            const collapseButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+            collapseButton.id = 'panel-collapse-btn';
+            // (SỬA v50) Bỏ chữ, chỉ để icon
+            collapseButton.innerHTML = '<i class="fa-solid fa-chevron-right w-4 h-4"></i>';
+            collapseButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                // Chỉ TẮT
+                L.DomUtil.removeClass(container, 'expanded');
+            };
+            // (*** HẾT MỚI v50 ***)
 
+            // (*** MỚI v48 ***) Nút Bảng Xếp Hạng (Toggle)
+            const rankButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+            rankButton.id = 'rank-toggle-btn';
+            // (SỬA v50) Style Tắt (Mặc định)
+            rankButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+            rankButton.innerHTML = '<i class="fa-solid fa-trophy w-4 h-4"></i> <span class="button-text">Xếp Hạng</span>';
+            rankButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                toggleRankPanel(); // Hàm mới
+            };
+            // (Ẩn nút này đi ban đầu, JS sẽ bật lên nếu có data)
+            rankButton.style.display = 'none'; 
 
+            // (*** MỚI v48 ***) Nút Tùy Chỉnh Map (Filter)
+            const filterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+            filterButton.id = 'filter-toggle-btn';
+            // (SỬA v50) Style Tắt (Mặc định)
+            filterButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+            filterButton.innerHTML = '<i class="fa-solid fa-sliders w-4 h-4"></i> <span class="button-text">Tùy Chỉnh Map</span>';
+            filterButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                toggleFilterControls();
+            };
 
-            // 2. Nút Routing
-            const routingButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg bird-mode', container);
+            // Nút Routing
+            const routingButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg bird-mode', buttonsWrapper);
             routingButton.id = 'routing-toggle-btn'; 
-            routingButton.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> Đường chim Bay (Nhanh)';
+            routingButton.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> <span class="button-text">Đường chim Bay</span>';
             routingButton.onclick = (e) => {
                 L.DomEvent.stopPropagation(e);
                 toggleRoutingMode();
             };
             
-            // 3. Nút Chế độ Pin
-            const batteryButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg pin-mode', container);
+            // Nút Chế độ Pin
+            const batteryButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg pin-mode', buttonsWrapper); 
             batteryButton.id = 'battery-toggle-btn'; 
-            batteryButton.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> Chế độ Pin';
+            batteryButton.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>'; 
             batteryButton.onclick = (e) => {
                 L.DomEvent.stopPropagation(e);
                 toggleBatteryView();
             };
 
-            // 4. (MỚI v42) Nút Bật/Tắt Gom Cụm
-            const clusterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg cluster-on', container);
+            // Nút Bật/Tắt Gom Cụm
+            const clusterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg cluster-off', buttonsWrapper); 
             clusterButton.id = 'cluster-toggle-btn';
-            clusterButton.innerHTML = '<i class="fa-solid fa-boxes-stacked w-4 h-4"></i> Gom Cụm (Bật)';
+            clusterButton.innerHTML = '<i class="fa-solid fa-braille w-4 h-4"></i> <span class="button-text">Gom Cụm (Tắt)</span>'; 
             clusterButton.onclick = (e) => {
                 L.DomEvent.stopPropagation(e);
-                toggleClustering(); // Gọi hàm bật/tắt mới
+                toggleClustering();
             };
-            // (HẾT MỚI v42)
 
-            // 5. (MỚI v43) Nút Bật/Tắt Nhãn KM
-            const labelsButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg labels-on', container);
+            // Nút Bật/Tắt Nhãn KM
+            const labelsButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg labels-on', buttonsWrapper);
             labelsButton.id = 'labels-toggle-btn';
-            labelsButton.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> Nhãn KM (Bật)';
+            labelsButton.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">Nhãn KM (Bật)</span>';
             labelsButton.onclick = (e) => {
                 L.DomEvent.stopPropagation(e);
-                toggleDistanceLabels(); // Gọi hàm bật/tắt mới
-            };
-            // (HẾT MỚI v43)
-
-            // 6. Nút Tùy Chỉnh Map (Filter)
-            const filterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', container);
-            filterButton.id = 'filter-toggle-btn'; 
-            filterButton.innerHTML = '<i class="fa-solid fa-sliders w-4 h-4"></i> Tùy Chỉnh Map';
-            filterButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleFilterControls(); // Gọi hàm bật/tắt popup
+                toggleDistanceLabels();
             };
             
+            // Nút Bật/Tắt NHNN
+            const nhnnButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg nhnn-on', buttonsWrapper);
+            nhnnButton.id = 'nhnn-toggle-btn';
+            nhnnButton.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
+            nhnnButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                toggleNhnn();
+            };
+            
+            // --- Hết các nút con ---
+
+            // (MỚI v47) Khi click vào bản đồ, đóng panel (nếu đang mở trên di động)
+            map.on('click', () => {
+                L.DomUtil.removeClass(container, 'expanded');
+            });
+            // (MỚI v47) Khi kéo bản đồ, cũng đóng panel
+            map.on('dragstart', () => {
+                 L.DomUtil.removeClass(container, 'expanded');
+            });
+
             return container;
         },
         onRemove: function(map) {}
@@ -896,41 +1190,34 @@
     
     // Thêm control mới vào bản đồ
     new L.Control.MasterControls({ position: 'topright' }).addTo(map);
-
-    function toggleFilterControls() {
-        const controls = document.getElementById('filter-controls-container');
-        if (controls.style.display === 'block') {
-            controls.style.display = 'none';
-        } else {
-            controls.style.display = 'block';
-        }
-    }
-
-
     // --- 5. Các Hàm Chức năng ---
     
-/**
-     * (SỬA ĐỔI v42: Bỏ .addTo(pointMarkersLayer))
-     * Marker sẽ được thêm/xóa bởi hàm updateMarkersVisibility
+    /**
+     * (SỬA ĐỔI v44: Tách riêng marker NHNN)
      */
     function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr) { 
-        const isNHNN = nhnn || false; 
+        // (SỬA v44.1) Logic check 'isNHNN' này mạnh hơn
+        const isNHNN = (nhnn === true || String(nhnn).toLowerCase() === 'true' || String(nhnn) === '1');
         
-        // (SỬA v36) Trim() tất cả dữ liệu text đầu vào
+        // ... (code phân tích dữ liệu) ...
         const cleanChinhanh = chinhanh ? String(chinhanh).trim() : 'Không có';
         const cleanVung = vung ? String(vung).trim() : 'Không xác định';
-        
-        // (MỚI v37) Phân tích dữ liệu tài chính
         const cleanTonQuy = parseFloat(String(tonQuyStr).replace(/[\s,]/g, '')) || 0;
         const cleanHanMuc = parseFloat(String(hanMucStr).replace(/[\s,]/g, '')) || 0;
-        // (SỬA v37.1) Sửa logic phát hiện vượt/không vượt
         const isVuotHanMuc = String(vuotHanMucStr).trim() !== '-' && String(vuotHanMucStr).trim() !== '';
 
         
-        // (*** SỬA v42 ***) XÓA BỎ .addTo(pointMarkersLayer)
+        // (*** SỬA v44 ***) Logic tạo marker
         const newMarker = L.marker(latlng, { 
             icon: isNHNN ? createNHNNIcon() : createPGDIcon() 
         });
+
+        // (*** MỚI v44 ***)
+        // Nếu là NHNN, thêm thẳng vào lớp NHNN và KHÔNG tham gia gom cụm
+        if (isNHNN) {
+            newMarker.addTo(nhnnMarkersLayer); 
+        }
+        // Nếu không phải NHNN, marker sẽ được quản lý bởi `updateMarkersVisibility`
         
         const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
 
@@ -942,13 +1229,13 @@
             chinhanh: cleanChinhanh, 
             vung: cleanVung, 
             isVisible: true,
-            nhnn: isNHNN,
-            // (MỚI v37) Lưu dữ liệu đã phân tích
+            nhnn: isNHNN, // (Quan trọng) Lưu lại giá trị đã được chuẩn hóa
             tonQuy: cleanTonQuy,
             hanMuc: cleanHanMuc,
             vuotHanMuc: isVuotHanMuc
         };
         
+        // ... (Toàn bộ code gắn sự kiện 'newMarker.on(...)' giữ nguyên) ...
         if (isNHNN) {
             newMarker.on('click', (e) => {
                 L.DomEvent.stopPropagation(e); 
@@ -957,7 +1244,6 @@
         } else {
             newMarker.on('mouseover', (e) => {
                 highlightRankItem(newPointData.id);
-                // (SỬA v39) Chỉ show preview nếu KHÔNG ở chế độ pin VÀ điểm chưa có nhóm
                 if (newPointData.groupId === null && !isBatteryView) {
                     const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn); 
                     let coveredPoints = [];
@@ -966,30 +1252,24 @@
                             coveredPoints.push(pointToTest);
                         }
                     }
-                    
                     const previewItem = {
                         type: 'NEW', 
                         centerPoint: newPointData,
                         coveredPoints: coveredPoints,
                         color: PREVIEW_COLOR 
                     };
-                    
                     showPreview(previewItem, null); 
                 }
             });
-
             newMarker.on('mouseout', () => {
                 clearRankItemHighlight(); 
-                // (SỬA v39) Luôn luôn gọi clearPreview
                 clearPreview();
             });
-
             newMarker.on('click', (e) => {
                 L.DomEvent.stopPropagation(e); 
                 handleMarkerClick(newPointData);
             });
         }
-        
         newMarker.on('popupclose', () => {
             currentPopup = null;
         });
@@ -998,11 +1278,37 @@
         return newPointData; 
     }
     
-/**
+    /**
+     * (*** MỚI v45 ***) Hàm Bật/Tắt hiển thị lớp NHNN
+     */
+    function toggleNhnn() {
+        // 1. Đảo ngược trạng thái
+        showNhnnMarkers = !showNhnnMarkers;
+        const button = document.getElementById('nhnn-toggle-btn');
+        
+        if (currentPopup) map.closePopup(currentPopup);
+
+        // 2. Cập nhật nút
+        if (showNhnnMarkers) {
+            button.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
+            button.classList.add('nhnn-on');
+            button.classList.remove('nhnn-off');
+            showToast("Đã BẬT: Hiển thị NHNN", 'info');
+        } else {
+            button.innerHTML = '<i class="fa-solid fa-eye-slash w-4 h-4"></i> <span class="button-text">Hiện NHNN</span>';
+            button.classList.add('nhnn-off');
+            button.classList.remove('nhnn-on');
+            showToast("Đã TẮT: Ẩn NHNN", 'warning');
+        }
+
+        // 3. (QUAN TRỌNG) Gọi lại hàm applyFilter
+        applyFilter();
+    }
+    
+    /**
      * (SỬA ĐỔI v42: Thêm updateMarkersVisibility() để hiển thị marker lần đầu)
      */
     function loadPreloadedData() {
-        // !!! THAY THẾ BẰNG URL FLOW POWER AUTOMATE CỦA BẠN !!!
         const powerAutomateUrl = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7a3ba54b6604025882ae481816180bb/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=R88_MePGo47lYzv0ndIiVxbRUcMncU26zdMq9HGw9hs'; 
 
         showToast("Đang tải dữ liệu từ Power Automate...", 'info');
@@ -1026,15 +1332,12 @@
             }
 
             data.forEach(item => {
-                // (SỬA v36) Đảm bảo LATITUDE và LONGITUDE là số, xóa S, xóa cách
                 const lat = parseFloat(String(item.LATITUDE).trim());
                 const lng = parseFloat(String(item.LONGITUDE).replace('S', '').trim());
 
-                // Chỉ thêm điểm nếu lat/lng hợp lệ
                 if (!isNaN(lat) && !isNaN(lng)) {
                     const latlng = L.latLng(lat, lng);
 
-                    // (SỬA v37) Truyền đầy đủ 7 tham số
                     addPointToMap(
                         latlng, 
                         item.TERMID, 
@@ -1051,7 +1354,6 @@
                 }
             });
             
-            // (SỬA v35) Xây dựng giao diện phễu lọc mới
             buildCascadingFiltersUI(); 
 
             showToast(`Đã tải ${data.length} điểm dữ liệu.`, 'success');
@@ -1059,10 +1361,7 @@
             updateRankTable(); 
 
             // (*** MỚI v42 ***)
-            // Vì addPointToMap không còn tự thêm marker,
-            // chúng ta phải gọi hàm này để thêm các marker (đã lọc) vào layer đang hoạt động
             updateMarkersVisibility();
-            // (*** HẾT MỚI v42 ***)
             
             if (bounds.isValid()) {
                 map.fitBounds(bounds.pad(0.1));
@@ -1072,18 +1371,11 @@
             console.error('Lỗi khi tải dữ liệu từ Power Automate:', error);
             showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
             updateRankTable();
-            // (MỚI v42) Gọi cả khi lỗi để đảm bảo UI đúng
             updateMarkersVisibility(); 
         });
     }
 
 
-    /**
-     * (XÓA v36) Xóa bỏ hàm click-để-thêm-điểm
-     */
-    // map.on('click', function(e) { ... });
-    
-    
     // --- (MỚI v35) CỤM LOGIC LỌC GIA ĐÌNH ---
     
     /**
@@ -1098,27 +1390,27 @@
             <div class="filter-control">
                 <label for="filter-vung">Lọc theo Vùng:</label>
                 <select id="filter-vung">
-                    </select>
+                </select>
             </div>
             <div class="filter-control">
                 <label for="filter-chinhanh">Lọc theo Chi Nhánh:</label>
                 <select id="filter-chinhanh">
-                    </select>
+                </select>
             </div>
             <div class="filter-control">
                 <label for="filter-termid">Lọc theo Mã CN (TERMID):</label>
                 <select id="filter-termid">
-                    </select>
+                </select>
             </div>
             <div class="filter-control">
                 <label for="filter-vuothm">Lọc theo Hạn Mức:</label>
                 <select id="filter-vuothm">
-                    </select>
+                </select>
             </div>
             <div class="filter-control">
                 <label for="filter-nhom">Lọc theo Nhóm:</label>
                 <select id="filter-nhom">
-                    </select>
+                </select>
             </div>
             <button id="reset-cascading-filter-btn">
                 <i class="fa-solid fa-filter-circle-xmark"></i> Xóa Lọc
@@ -1232,11 +1524,11 @@
         const currentSelectedTermid = termidSelect.value || 'ALL';
         const vuotHMSet = new Set(
              allPoints
-                .filter(p => !p.nhnn) 
-                .filter(p => (selectedVung === 'ALL' || p.vung === selectedVung) &&
-                             (currentSelectedChiNhanh === 'ALL' || p.chinhanh === currentSelectedChiNhanh) &&
-                             (currentSelectedTermid === 'ALL' || String(p.id) === String(currentSelectedTermid)))
-                .map(p => p.vuotHanMuc) 
+                 .filter(p => !p.nhnn) 
+                 .filter(p => (selectedVung === 'ALL' || p.vung === selectedVung) &&
+                              (currentSelectedChiNhanh === 'ALL' || p.chinhanh === currentSelectedChiNhanh) &&
+                              (currentSelectedTermid === 'ALL' || String(p.id) === String(currentSelectedTermid)))
+                 .map(p => p.vuotHanMuc) 
         );
         vuothmSelect.innerHTML = '<option value="ALL">-- Tất cả Hạn Mức --</option>';
         if (vuotHMSet.has(true)) {
@@ -1285,7 +1577,7 @@
     }
 
     /**
-     * (SỬA v40) Áp dụng cả 5 bộ lọc
+     * (SỬA v45) Thêm logic kiểm tra biến 'showNhnnMarkers'
      */
     function applyFilter() {
         const selVung = document.getElementById('filter-vung');
@@ -1329,7 +1621,15 @@
                 }
             }
             
-            p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && nhomMatch;
+            // (*** MỚI v45 ***) Thêm điều kiện kiểm tra nút Ẩn/Hiện NHNN
+            let nhnnToggleMatch = true;
+            if (p.nhnn && !showNhnnMarkers) {
+                nhnnToggleMatch = false; // Tắt nếu là NHNN và nút đang "Tắt"
+            }
+            // (*** HẾT MỚI v45 ***)
+
+            // Thêm 'nhnnToggleMatch' vào phép tính cuối cùng
+            p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && nhomMatch && nhnnToggleMatch;
         });
 
         if (currentPopup) {
@@ -1342,45 +1642,70 @@
         updateRankTable();         
     }
     
-/**
-     * (SỬA ĐỔI v42.1 - Sửa lỗi Tắt Gom Cụm)
-     * Hàm này phải xử lý cả hai loại layer: 
-     * 1. L.markerClusterGroup (có .addLayers - số nhiều)
-     * 2. L.layerGroup (chỉ có .addLayer - số ít).
+    /**
+     * (SỬA ĐỔI v44 - Tách logic hiển thị PGD và NHNN)
      */
     function updateMarkersVisibility() {
-        // 1. Lấy danh sách marker cần hiển thị
-        const visibleMarkers = allPoints
-            .filter(p => p.isVisible)
+        
+        // --- 1. XỬ LÝ CÁC ĐIỂM PGD/ATM (CÓ GOM CỤM) ---
+        
+        // 1a. Lấy danh sách marker PGD/ATM (KHÔNG phải NHNN) cần hiển thị
+        const visiblePgdMarkers = allPoints
+            .filter(p => !p.nhnn && p.isVisible) // <-- Thêm điều kiện !p.nhnn
             .map(p => p.marker);
 
-        // 2. Xóa tất cả các marker khỏi lớp đang hoạt động
-        // (Cả hai loại layer đều có hàm .clearLayers() nên an toàn)
+        // 1b. Xóa các PGD/ATM marker cũ khỏi lớp đang hoạt động
         pointMarkersLayer.clearLayers(); 
 
-        // 3. (QUAN TRỌNG) Thêm marker vào lại, tùy theo loại layer
+        // 1c. Thêm marker PGD/ATM vào lại, tùy theo loại layer
         if (isClusteringEnabled) {
-            // Chế độ GOM CỤM: Dùng .addLayers() (plural) để thêm hàng loạt (nhanh)
-            pointMarkersLayer.addLayers(visibleMarkers);
+            // Chế độ GOM CỤM: Dùng .addLayers()
+            pointMarkersLayer.addLayers(visiblePgdMarkers);
         } else {
-            // Chế độ TIÊU CHUẨN: Dùng .addLayer() (singular) trong vòng lặp
-            visibleMarkers.forEach(marker => {
+            // Chế độ TIÊU CHUẨN: Dùng .addLayer()
+            visiblePgdMarkers.forEach(marker => {
                 pointMarkersLayer.addLayer(marker);
             });
         }
+
+        // --- 2. XỬ LÝ CÁC ĐIỂM NHNN (KHÔNG GOM CỤM) ---
+        
+        // Lặp qua tất cả các điểm NHNN và ẩn/hiện chúng trên lớp cố định
+        allPoints.filter(p => p.nhnn).forEach(nhnnPoint => {
+            if (nhnnPoint.isVisible) {
+                // Nếu 'visible' và chưa có trên layer, thêm vào
+                if (!nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
+                    nhnnMarkersLayer.addLayer(nhnnPoint.marker);
+                }
+            } else {
+                // Nếu 'invisible' và đang có trên layer, xóa đi
+                if (nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
+                    // Xóa tooltip nếu có, trước khi xóa marker
+                    if (nhnnPoint.marker.getTooltip()) {
+                        nhnnPoint.marker.unbindTooltip();
+                    }
+                    nhnnMarkersLayer.removeLayer(nhnnPoint.marker);
+                }
+            }
+        });
     }
     
     // --- HẾT CỤM LOGIC LỌC v35 ---
 
 
     /**
-     * (SỬA ĐỔI v39: Ẩn khi ở chế độ Pin)
+     * (SỬA ĐỔI v48: Ẩn/Hiện nút 🏆 thay vì ẩn/hiện panel)
      */
     function updateRankTable() {
         const rankTableContainer = document.getElementById('rank-table-container');
+        const rankToggleButton = document.getElementById('rank-toggle-btn'); // ID mới
+        
+        if (!rankToggleButton) return; // (An toàn) Nếu nút chưa kịp tạo
+
         // (MỚI v39) Không hiển thị bảng xếp hạng khi ở chế độ Pin
         if (isBatteryView) {
-            rankTableContainer.style.display = 'none';
+            rankTableContainer.style.display = 'none'; // Vẫn ẩn panel
+            rankToggleButton.style.display = 'none'; // Ẩn luôn nút
             currentRankings = [];
             return; 
         }
@@ -1388,12 +1713,19 @@
         // ungroupedPoints chỉ lấy các điểm 'null' (tự động loại NHNN)
         const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible);
 
+        // (SỬA v48) Logic mới: Ẩn/Hiện NÚT BẤM
         if (ungroupedPoints.length === 0 && allGroups.length === 0) {
-            rankTableContainer.style.display = 'none';
+            rankToggleButton.style.display = 'none'; // Ẩn nút
+            rankTableContainer.style.display = 'none'; // Tắt panel (phòng hờ)
+            currentRankings = [];
             return;
         }
-        rankTableContainer.style.display = 'block';
-
+        
+        // (SỬA v48) Hiển thị nút bấm (dạng flex)
+        rankToggleButton.style.display = 'flex'; 
+        
+        // *** ĐÃ XÓA: rankTableContainer.style.display = 'block'; ***
+        
         currentRankings = []; 
         
         // ---- BƯỚC 2: Xếp hạng "TẠO NHÓM MỚI" ----
@@ -1557,12 +1889,12 @@
 
         if (pointData.nhnn) { 
             let html = `<div class="action-popup-header">Điểm Tham Chiếu</div>
-                        <div class="action-popup-buttons">
-                            <div class="action-popup-info" style="text-align: center; padding: 10px 0;">
-                                <img src="${pointData.marker.options.icon.options.iconUrl}" style="width: 30px; height: 30px; margin: 0 auto 5px auto;"><br>
-                                <b>${pointData.id}</b><br>(Ngân hàng Nhà nước)
-                            </div>
-                        </div>`;
+                            <div class="action-popup-buttons">
+                                <div class="action-popup-info" style="text-align: center; padding: 10px 0;">
+                                    <img src="${pointData.marker.options.icon.options.iconUrl}" style="width: 30px; height: 30px; margin: 0 auto 5px auto;"><br>
+                                    <b>${pointData.id}</b><br>(Ngân hàng Nhà nước)
+                                </div>
+                            </div>`;
             
             currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
                 .setLatLng(pointData.latlng)
@@ -1574,13 +1906,13 @@
         } else if (isBatteryView) {
             // (MỚI v39) Hiển thị popup chi tiết tiền
             let html = `<div class="action-popup-header">${pointData.id}</div>
-                        <div class="action-popup-info battery-info-popup">
-                            <b>Tồn quỹ:</b> ${formatFullNumber(pointData.tonQuy)}<br>
-                            <b>Hạn mức:</b> ${formatFullNumber(pointData.hanMuc)}<br>
-                            <b>Trạng thái:</b> ${pointData.vuotHanMuc ? 
-                                '<span style="color: red; font-weight: bold;">Vượt Hạn Mức</span>' : 
-                                'Trong Hạn Mức'}
-                        </div>`;
+                            <div class="action-popup-info battery-info-popup">
+                                <b>Tồn quỹ:</b> ${formatFullNumber(pointData.tonQuy)}<br>
+                                <b>Hạn mức:</b> ${formatFullNumber(pointData.hanMuc)}<br>
+                                <b>Trạng thái:</b> ${pointData.vuotHanMuc ? 
+                                    '<span style="color: red; font-weight: bold;">Vượt Hạn Mức</span>' : 
+                                    'Trong Hạn Mức'}
+                            </div>`;
             
             currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
                 .setLatLng(pointData.latlng)
@@ -1634,8 +1966,8 @@
                                 const distance = pointData.latlng.distanceTo(group.centerPoint.latlng);
                                 if (distance <= RADIUS_METERS) {
                                      html += `<button class="btn-move" onclick="movePoint('${pointData.id}', ${group.id})">
-                                                 <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển sang Nhóm ${group.groupNumber}
-                                             </button>`;
+                                                <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển sang Nhóm ${group.groupNumber}
+                                              </button>`;
                                      hasAction = true;
                                 }
                             }
@@ -1663,7 +1995,7 @@
         }
     }
 
-/**
+    /**
      * (SỬA ĐỔI v43: Thêm kiểm tra an toàn cho gom cụm VÀ nhãn km)
      */
     function showPreview(item, rowElement = null) { 
@@ -1814,7 +2146,7 @@
         }
     }
 
-/**
+    /**
      * (SỬA ĐỔI v41: Thêm kiểm tra an toàn cho gom cụm)
      */
     function clearPreview() {
@@ -1939,7 +2271,7 @@
         showToast(`Đã chuyển Điểm ${pointId} sang Nhóm ${newGroup.groupNumber}`, 'success');
     }
 
-/**
+    /**
      * (*** SỬA ĐỔI v43 ***) 
      * Thêm điều kiện showDistanceLabels cho nhãn KM của NHNN.
      */
@@ -2068,45 +2400,27 @@
              } else if (p.groupId === null) { // Điểm chưa nhóm
                  p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
              } else if (p.groupId !== 'REFERENCE') { // Điểm đã vào nhóm (không phải NHNN)
-                 // Reset về icon PGD/Pin
+                // Reset về icon PGD/Pin
                  p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
              }
              
              if (p.marker.getTooltip()) {
-                p.marker.unbindTooltip();
+                 p.marker.unbindTooltip();
             }
         });
     }
 
 
     /**
-     * (SỬA ĐỔI v35: Reset bộ lọc gia đình)
+     * (SỬA v48) Xóa logic của hàm ClearAll (vì nút đã bị xóa)
+     * Giữ lại hàm rỗng để tránh lỗi nếu có code cũ gọi
      */
     function clearAll() {
-        if (currentPopup) map.closePopup();
-        clearAnalysisVisuals(); 
-        previewLayer.clearLayers();  
-        pointMarkersLayer.clearLayers(); 
-        
-        allPoints = [];
-        allGroups = [];
-        currentRankings = [];
-        
-        // (SỬA v35) Reset bộ lọc
-        const filterContainer = document.getElementById('cascading-filter-container');
-        if (filterContainer) {
-            filterContainer.innerHTML = ''; // Xóa các dropdown
-        }
-        
-        updateRankTable(); 
-        
-        showToast("Đã xóa tất cả các điểm", 'warning');
-        
-        // (MỚI v35) Tải lại dữ liệu và bộ lọc
-        loadPreloadedData();
+        showToast("Chức năng Xóa Tất Cả đã bị tắt.", "warning");
+        // (Toàn bộ logic xóa đã được gỡ bỏ)
     }
-
-/**
+    
+    /**
      * (HÀM v23) Hàm Hybrid: Vẽ chim bay, xếp hàng routing
      * (SỬA v43) Thêm điều kiện showDistanceLabels
      */
@@ -2169,7 +2483,7 @@
         }
     }
 
-/**
+    /**
      * (HÀM MỚI v15) Xử lý hàng đợi routing
      * (SỬA v43) Thêm điều kiện showDistanceLabels
      */
@@ -2194,10 +2508,10 @@
 
         const { startLatLng, endLatLng, endMarker, pointData, color, groupNumber, group } = task;
 
-        // (SỬA v41) Bổ sung kiểm tra endMarker và map.hasLayer
-        // (SỬA v42) Tắt gom cụm có thể làm endMarker bị xóa, nên phải check
-        if (!pointData.isVisible || !endMarker || !pointMarkersLayer.hasLayer(endMarker)) {
-             // (SỬA v42.1) Dùng pointMarkersLayer.hasLayer thay vì map.hasLayer
+        // (SỬA v44.1) Kiểm tra cả 2 layer
+        const isMarkerOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
+
+        if (!pointData.isVisible || !endMarker || !isMarkerOnMap) {
             finishTask();
             return;
         }
@@ -2222,8 +2536,9 @@
         group.routingControls.push(router);
 
         router.on('routesfound', function(e) {
+            const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
             // (*** SỬA v43 ***) Thêm điều kiện && showDistanceLabels
-            if (pointData.isVisible && endMarker && pointMarkersLayer.hasLayer(endMarker) && !isBatteryView && showDistanceLabels) {
+            if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
                 const distanceInKm = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
                 const tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ${distanceInKm} km (lái xe)`;
                 const newTooltip = endMarker.bindTooltip(tooltipContent, {
@@ -2245,8 +2560,9 @@
         });
 
         router.on('routingerror', function(e) {
+            const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
             // (*** SỬA v43 ***) Thêm điều kiện && showDistanceLabels
-            if (pointData.isVisible && endMarker && pointMarkersLayer.hasLayer(endMarker) && !isBatteryView && showDistanceLabels) {
+            if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
                 L.polyline([startLatLng, endLatLng], {
                     color: color, 
                     opacity: 1.0, 
@@ -2329,14 +2645,14 @@
         if (currentPopup) map.closePopup(currentPopup);
         
         if (isBirdMode) {
-            button.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> Đường chim bay (Nhanh)';
+            button.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> <span class="button-text">Đường chim Bay</span>'; // Sửa chữ v48
             button.classList.add('bird-mode');
             button.classList.remove('car-mode');
             routingQueue = []; 
             isProcessingQueue = false; 
             showToast("Đã BẬT: Chế độ Chim Bay (Nhanh)", 'warning');
         } else {
-            button.innerHTML = '<i class="fa-solid fa-car w-4 h-4"></i> Lái xe (Chậm)';
+            button.innerHTML = '<i class="fa-solid fa-car w-4 h-4"></i> <span class="button-text">Lái xe (Chậm)</span>'; // Sửa chữ v48
             button.classList.add('car-mode');
             button.classList.remove('bird-mode');
             showToast("Đã BẬT: Chế độ Lái xe (Chậm)", 'info');
@@ -2345,7 +2661,7 @@
         drawAllGroups();
     }
 
-/**
+    /**
      * (MỚI v42) Hàm Bật/Tắt tính năng Gom Cụm (Clustering)
      */
     function toggleClustering() {
@@ -2356,7 +2672,6 @@
         if (currentPopup) map.closePopup(currentPopup);
 
         // 2. Xóa layer CŨ khỏi bản đồ
-        // (Lưu ý: pointMarkersLayer đang trỏ đến layer CŨ)
         map.removeLayer(pointMarkersLayer);
         
         // 3. (Quan trọng) Cập nhật con trỏ pointMarkersLayer
@@ -2364,7 +2679,7 @@
             pointMarkersLayer = clusterLayer; // Trỏ sang LỚP GOM CỤM
             
             // Cập nhật nút
-            button.innerHTML = '<i class="fa-solid fa-boxes-stacked w-4 h-4"></i> Gom Cụm (Bật)';
+            button.innerHTML = '<i class="fa-solid fa-boxes-stacked w-4 h-4"></i> <span class="button-text">Gom Cụm (Bật)</span>';
             button.classList.add('cluster-on');
             button.classList.remove('cluster-off');
             showToast("Đã BẬT: Gom Cụm", 'info');
@@ -2373,7 +2688,7 @@
             pointMarkersLayer = standardLayer; // Trỏ sang LỚP TIÊU CHUẨN
             
             // Cập nhật nút
-            button.innerHTML = '<i class="fa-solid fa-braille w-4 h-4"></i> Gom Cụm (Tắt)';
+            button.innerHTML = '<i class="fa-solid fa-braille w-4 h-4"></i> <span class="button-text">Gom Cụm (Tắt)</span>';
             button.classList.add('cluster-off');
             button.classList.remove('cluster-on');
             showToast("Đã TẮT: Gom Cụm (Hiển thị tất cả)", 'warning');
@@ -2383,14 +2698,9 @@
         map.addLayer(pointMarkersLayer);
 
         // 5. Yêu cầu vẽ lại các marker
-        // Hàm này sẽ tự động:
-        // - Lấy các điểm (allPoints)
-        // - Lọc các điểm (p.isVisible)
-        // - Thêm chúng vào layer MỚI (pointMarkersLayer)
         updateMarkersVisibility();
         
         // 6. Vẽ lại các đường line/vòng tròn
-        // (Vì updateMarkersVisibility không vẽ lại vòng tròn 30km cố định)
         drawAllGroups();
     }
 
@@ -2406,7 +2716,7 @@
         // Tùy chỉnh style cho viền
         const borderStyle = {
             "color": "#00008B",  // (Bạn có thể đổi màu viền ở đây, vd: "#FF0000" cho màu đỏ)
-            "weight": 2,       // Độ dày của viền
+            "weight": 2,        // Độ dày của viền
             "opacity": 0.8,
             "fillOpacity": 0.0, // Quan trọng: Không tô màu nền
             "pane": "borderPane" // (MỚI v40) Vẽ lên pane đã tạo
@@ -2424,6 +2734,7 @@
                 showToast("Không tải được viền bản đồ VN", "error");
             });
     }
+    
     /**
      * (SỬA v38) Cập nhật style cho nút
      */
@@ -2432,12 +2743,12 @@
         const button = document.getElementById('battery-toggle-btn');
         
         if (isBatteryView) {
-            button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> Chế độ Ghim';
+            button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
             button.classList.add('battery-mode');
             button.classList.remove('pin-mode');
             showToast("Đã BẬT: Chế độ Pin", 'info');
         } else {
-            button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> Chế độ Pin';
+            button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
             button.classList.add('pin-mode');
             button.classList.remove('battery-mode');
             showToast("Đã TẮT: Chế độ Pin", 'warning');
@@ -2495,7 +2806,17 @@
 
     // Gọi hàm lần đầu để áp dụng giá trị mặc định (từ HTML)
     updateMapFilter();
-
+// (*** MỚI v50 ***) Hàm đóng Bảng Xếp Hạng (gọi từ nút X)
+    function closeRankPanel() {
+        const panel = document.getElementById('rank-table-container');
+        const button = document.getElementById('rank-toggle-btn');
+        if (panel) panel.style.display = 'none';
+        
+        // Cũng cập nhật style của nút 🏆 trong menu ☰
+        if (button) {
+             button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; // Style Tắt
+        }
+    }
 </script>
 
 </body>
