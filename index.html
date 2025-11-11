@@ -22,686 +22,828 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        html, body, #map {
-            height: 100vh;
-            width: 100vw;
-            margin: 0;
-            padding: 0;
-            font-family: 'Times New Roman', Times, serif;
-            overflow: hidden;
+<style>
+    html, body, #map {
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+        padding: 0;
+        font-family: 'Times New Roman', Times, serif;
+        overflow: hidden;
+    }
+    
+    .leaflet-tile-pane {
+         filter: grayscale(1) contrast(1.1) brightness(0.95); 
+    }
+    /* (MỚI v40) CSS cho Lớp Viền (Pane) */
+    .leaflet-border-pane {
+        pointer-events: none; /* Không bắt click chuột */
+    }
+    /* Bảng xếp hạng */
+    #rank-table-container {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 280px; 
+        max-height: calc(100vh - 80px); 
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        font-size: 14px;
+        display: none; 
+    }
+    #rank-table-header {
+        padding: 8px 12px;
+        font-weight: bold;
+        font-size: 16px;
+        border-bottom: 1px solid #ddd;
+        background-color: #f9f9f9;
+        border-radius: 8px 8px 0 0;
+    }
+    #rank-table-body {
+        overflow-y: auto;
+        max-height: calc(100vh - 130px);
+    }
+    .rank-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .rank-item:hover {
+        background-color: #f0f8ff;
+    }
+    .rank-item-move {
+        background-color: #fffbeb; /* Vàng nhạt */
+    }
+    .rank-item button {
+        width: 100%;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        margin-top: 6px;
+        cursor: pointer;
+    }
+    
+    /* CSS cho các nút trong 1 hàng (cho chức năng Move) */
+    .button-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    .button-group button {
+        width: auto;
+        flex-grow: 1;
+        background: #d97706; /* Cam */
+    }
+    .button-group button:hover {
+        background: #b45309;
+    }
+
+    .rank-item-new button { background: #2563eb; } /* Xanh dương */
+    .rank-item-new button:hover { background: #1d4ed8; }
+
+
+    /* Icon cho điểm TÂM (dùng ngôi sao) */
+    .center-point-icon {
+        width: 24px !important;
+        height: 24px !important;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: white;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255,255,255, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255,255,255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255,255,255, 0); }
+    }
+
+
+    
+    /* (MỚI v39) CSS cho Icon Pin (Battery) và Nhãn Tiền */
+    .battery-icon-div-wrapper { /* Div ngoài cùng của L.divIcon */
+        display: flex;
+        align-items: center;
+        /* Căn giữa div này so với tọa độ lat/lng */
+        position: absolute;
+        left: 50%;
+        top: 50%;
+         /* Dịch chuyển [-(width_pin/2 + đầu pin/2), -(height_pin/2)] */
+        transform: translate(-23px, -11px);
+    }
+    .battery-icon-container {
+        width: 40px; /* (SỬA v39) To hơn */
+        height: 20px; /* (SỬA v39) To hơn */
+        border: 2px solid #555;
+        border-radius: 4px; 
+        background-color: #f0f0f0;
+        position: relative; 
+        display: flex;
+        align-items: center;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        flex-shrink: 0;
+    }
+    .battery-icon-container::after {
+        content: '';
+        position: absolute;
+        right: -6px; 
+        top: 4px; 
+        width: 4px; 
+        height: 10px; 
+        background-color: #555;
+        border-radius: 0 2px 2px 0;
+    }
+    .battery-fill {
+        height: 100%;
+        border-radius: 1px 0 0 1px;
+        transition: width 0.3s ease;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+    .battery-overflow {
+        height: 100%;
+        border-radius: 1px 0 0 1px;
+        transition: width 0.3s ease;
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 10; 
+    }
+    .battery-text {
+        width: 100%;
+        text-align: center;
+        font-size: 11px; 
+        font-weight: bold;
+        color: black;
+        z-index: 20; 
+        text-shadow: 0 0 2px white, 0 0 2px white; 
+        position: relative; 
+    }
+    /* (SỬA v39) Nhãn tiền có viền */
+    .battery-amount-label { 
+        margin-left: 8px; /* Khoảng cách từ đầu pin */
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #333;
+        border-radius: 3px;
+        padding: 1px 4px;
+        font-size: 11px;
+        font-weight: bold;
+        color: black;
+        white-space: nowrap;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    
+    /* CSS cho điểm "phình to, nhấp nháy" khi hover MOVE */
+    .point-move-preview {
+        transform: scale(1.5); 
+        animation: blink-animation 0.7s infinite alternate;
+        z-index: 1001 !important; 
+    }
+    @keyframes blink-animation {
+        from { opacity: 1.0; transform: scale(1.5); }
+        to { opacity: 0.6; transform: scale(1.4); }
+    }
+    
+    /* CSS cho Bảng Rank nhấp nháy */
+    .rank-item-highlight {
+        animation: highlight-green 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes highlight-green {
+        from { 
+            background-color: #f0f8ff; 
         }
+        to { 
+            background-color: #d1fae5; 
+            border-left: 4px solid #10b981; 
+            margin-left: -4px; 
+        }
+    }
+
+    /* CSS cho Popup Hành Động */
+    .action-popup .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+        padding: 0;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .action-popup .leaflet-popup-content {
+        margin: 0;
+        padding: 10px;
+        width: 220px !important;
+        font-size: 14px;
+    }
+    .action-popup-header {
+        font-weight: bold;
+        font-size: 16px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+    }
+    .action-popup-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    .action-popup-buttons button {
+        padding: 5px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .btn-new { background: #2563eb; } 
+    .btn-new:hover { background: #1d4ed8; }
+    .btn-add { background: #059669; } 
+    .btn-add:hover { background: #047857; }
+    .btn-move { background: #d97706; } 
+    .btn-move:hover { background: #b45309; }
+    .action-popup-info {
+        font-style: italic;
+        color: #555;
+    }
+    /* (MỚI v39) Style cho popup info pin */
+    .battery-info-popup {
+        font-style: normal !important;
+        color: #333 !important;
+        font-size: 13px; /* To hơn một chút */
+    }
+    .battery-info-popup b {
+        display: inline-block;
+        width: 70px; /* Căn lề cho đẹp */
+        color: #555;
+    }
+
+
+    /* Tooltip khoảng cách */
+    .distance-tooltip {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border: 1.5px solid;
+        color: #333 !important;
+        font-weight: bold;
+        font-size: 12px;
+        font-family: 'Times New Roman', Times, serif;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+        padding: 3px 6px !important;
+        border-radius: 4px;
+        cursor: pointer; 
+    }
+    .distance-tooltip .group-name {
+        font-size: 10px;
+        opacity: 0.8;
+        display: block;
+        text-align: center;
+        border-bottom: 1px dashed #ccc;
+        margin-bottom: 2px;
+    }
+    .distance-tooltip .loading-spinner {
+        font-size: 10px;
+        color: #999;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        margin-left: 4px;
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* Ẩn chỉ dẫn của Leaflet Routing Machine */
+    .leaflet-routing-container { display: none !important; }
+
+    /* (SỬA v38) Bỏ width: 110px, đổi sang 100% */
+    .leaflet-bar button, .leaflet-bar button:hover {
+        width: 100% !important; /*(SỬA)*/
+        height: 32px !important; 
+        font-size: 13px !important;
+        font-weight: 600 !important; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        gap: 6px; 
+        background-color: white !important; 
+        color: #1f2937 !important;
+        margin-bottom: 6px; /*(MỚI v38)*/
+    }
+    .leaflet-bar button:hover { background-color: #f3f4f6 !important; }
+    
+    /* (MỚI v38) CSS cho Bảng Điều Khiển Mới */
+    .custom-controls-container {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid #ccc;
+        padding: 8px;
+        width: 150px; /* Chiều rộng cố định cho panel */
+    }
+    .custom-controls-container .leaflet-bar-part {
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .custom-controls-container .leaflet-bar-part:last-child {
+        margin-bottom: 0;
+    }
+    
+    
+    /* Nút Routing */
+    #routing-toggle-btn.bird-mode { background-color: #fffbeb !important; color: #d97706 !important; }
+    #routing-toggle-btn.car-mode { background-color: #3b82f6 !important; color: white !important; }
+    
+    /* Nút Pin */
+    #battery-toggle-btn.pin-mode { background-color: #ecfdf5 !important; color: #059669 !important; }
+    #battery-toggle-btn.battery-mode { background-color: #16a34a !important; color: white !important; }
+
+    /* Nút Filter */
+    #filter-toggle-btn { background-color: #6b7280 !important; color: white !important; }
+    #filter-toggle-btn:hover { background-color: #4b5563 !important; }
+
+    /* (MỚI v42) CSS cho Nút Bật/Tắt Gom Cụm */
+    #cluster-toggle-btn.cluster-on { background-color: #8b5cf6 !important; color: white !important; }
+    #cluster-toggle-btn.cluster-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+    #cluster-toggle-btn.cluster-off:hover { background-color: #e5e7eb !important; }
+    /* (MỚI v43) CSS cho Nút Bật/Tắt Nhãn KM */
+    #labels-toggle-btn.labels-on { background-color: #f59e0b !important; color: white !important; }
+    #labels-toggle-btn.labels-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+    #labels-toggle-btn.labels-off:hover { background-color: #e5e7eb !important; }
+    /* (*** MỚI v45 ***) CSS cho Nút Bật/Tắt NHNN */
+    #nhnn-toggle-btn.nhnn-on { background-color: #059669 !important; color: white !important; } /* Màu xanh lá cây */
+    #nhnn-toggle-btn.nhnn-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+    #nhnn-toggle-btn.nhnn-off:hover { background-color: #e5e7eb !important; }
+    /* Toastify */
+    .custom-toast { font-family: 'Times New Roman', Times, serif !important; font-size: 14px !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important; }
+    .custom-toast.success { background: linear-gradient(135deg, #10b981, #059669) !important; }
+    .custom-toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb) !important; }
+    .custom-toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
+    .custom-toast.error { background: linear-gradient(135deg, #ef4444, #dc2626) !important; }
+
+    
+    /* CSS CHO ROUTING ĐỘNG */
+    @keyframes route-flow {
+        to {
+            stroke-dashoffset: -20;
+        }
+    }
+    .animated-route-line {
+        animation: route-flow 1s linear infinite;
+    }
+
+    /* === CSS CHO BẢNG ĐIỀU KHIỂN BỘ LỌC (SỬA VỊ TRÍ) === */
+    #filter-controls-container {
+        position: absolute;
+        top: 10px; /* Đẩy lên trên cùng */
+        /* (SỬA v55) Vị trí mặc định lùi khỏi Search Bar */
+        right: 320px; 
+        width: 250px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1003; /* Nổi lên trên Search (1001) */
+        font-size: 13px;
+        padding: 10px 15px;
+        font-family: 'Times New Roman', Times, serif;
+        display: none; 
         
-        .leaflet-tile-pane {
-             filter: grayscale(1) contrast(1.1) brightness(0.95); 
-        }
-        /* (MỚI v40) CSS cho Lớp Viền (Pane) */
-        .leaflet-border-pane {
-            pointer-events: none; /* Không bắt click chuột */
-        }
-        /* Bảng xếp hạng */
-        #rank-table-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 280px; 
-            max-height: calc(100vh - 80px); 
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            font-size: 14px;
-            display: none; 
-        }
-        #rank-table-header {
-            padding: 8px 12px;
-            font-weight: bold;
-            font-size: 16px;
-            border-bottom: 1px solid #ddd;
-            background-color: #f9f9f9;
-            border-radius: 8px 8px 0 0;
-        }
-        #rank-table-body {
-            overflow-y: auto;
-            max-height: calc(100vh - 130px);
-        }
-        .rank-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .rank-item:hover {
-            background-color: #f0f8ff;
-        }
-        .rank-item-move {
-            background-color: #fffbeb; /* Vàng nhạt */
-        }
-        .rank-item button {
-            width: 100%;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: 600;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            margin-top: 6px;
-            cursor: pointer;
-        }
-        
-        /* CSS cho các nút trong 1 hàng (cho chức năng Move) */
-        .button-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 6px;
-        }
-        .button-group button {
-            width: auto;
-            flex-grow: 1;
-            background: #d97706; /* Cam */
-        }
-        .button-group button:hover {
-            background: #b45309;
-        }
-
-        .rank-item-new button { background: #2563eb; } /* Xanh dương */
-        .rank-item-new button:hover { background: #1d4ed8; }
-
-
-        /* Icon cho điểm TÂM (dùng ngôi sao) */
-        .center-point-icon {
-            width: 24px !important;
-            height: 24px !important;
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            color: white;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255,255,255, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255,255,255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255,255,255, 0); }
-        }
-
-
-        
-        /* (MỚI v39) CSS cho Icon Pin (Battery) và Nhãn Tiền */
-        .battery-icon-div-wrapper { /* Div ngoài cùng của L.divIcon */
-            display: flex;
-            align-items: center;
-            /* Căn giữa div này so với tọa độ lat/lng */
-            position: absolute;
-            left: 50%;
-            top: 50%;
-             /* Dịch chuyển [-(width_pin/2 + đầu pin/2), -(height_pin/2)] */
-            transform: translate(-23px, -11px);
-        }
-        .battery-icon-container {
-            width: 40px; /* (SỬA v39) To hơn */
-            height: 20px; /* (SỬA v39) To hơn */
-            border: 2px solid #555;
-            border-radius: 4px; 
-            background-color: #f0f0f0;
-            position: relative; 
-            display: flex;
-            align-items: center;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-            flex-shrink: 0;
-        }
-        .battery-icon-container::after {
-            content: '';
-            position: absolute;
-            right: -6px; 
-            top: 4px; 
-            width: 4px; 
-            height: 10px; 
-            background-color: #555;
-            border-radius: 0 2px 2px 0;
-        }
-        .battery-fill {
-            height: 100%;
-            border-radius: 1px 0 0 1px;
-            transition: width 0.3s ease;
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-        .battery-overflow {
-            height: 100%;
-            border-radius: 1px 0 0 1px;
-            transition: width 0.3s ease;
-            position: absolute;
-            left: 0;
-            top: 0;
-            z-index: 10; 
-        }
-        .battery-text {
-            width: 100%;
-            text-align: center;
-            font-size: 11px; 
-            font-weight: bold;
-            color: black;
-            z-index: 20; 
-            text-shadow: 0 0 2px white, 0 0 2px white; 
-            position: relative; 
-        }
-        /* (SỬA v39) Nhãn tiền có viền */
-        .battery-amount-label { 
-            margin-left: 8px; /* Khoảng cách từ đầu pin */
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #333;
-            border-radius: 3px;
-            padding: 1px 4px;
-            font-size: 11px;
-            font-weight: bold;
-            color: black;
-            white-space: nowrap;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        }
-
-        
-        /* CSS cho điểm "phình to, nhấp nháy" khi hover MOVE */
-        .point-move-preview {
-            transform: scale(1.5); 
-            animation: blink-animation 0.7s infinite alternate;
-            z-index: 1001 !important; 
-        }
-        @keyframes blink-animation {
-            from { opacity: 1.0; transform: scale(1.5); }
-            to { opacity: 0.6; transform: scale(1.4); }
-        }
-        
-        /* CSS cho Bảng Rank nhấp nháy */
-        .rank-item-highlight {
-            animation: highlight-green 1.2s ease-in-out infinite alternate;
-        }
-        @keyframes highlight-green {
-            from { 
-                background-color: #f0f8ff; 
-            }
-            to { 
-                background-color: #d1fae5; 
-                border-left: 4px solid #10b981; 
-                margin-left: -4px; 
-            }
-        }
-
-        /* CSS cho Popup Hành Động */
-        .action-popup .leaflet-popup-content-wrapper {
-            border-radius: 8px;
-            padding: 0;
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        .action-popup .leaflet-popup-content {
-            margin: 0;
-            padding: 10px;
-            width: 220px !important;
-            font-size: 14px;
-        }
-        .action-popup-header {
-            font-weight: bold;
-            font-size: 16px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-        }
-        .action-popup-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        .action-popup-buttons button {
-            padding: 5px 10px;
-            font-size: 13px;
-            font-weight: 600;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .btn-new { background: #2563eb; } 
-        .btn-new:hover { background: #1d4ed8; }
-        .btn-add { background: #059669; } 
-        .btn-add:hover { background: #047857; }
-        .btn-move { background: #d97706; } 
-        .btn-move:hover { background: #b45309; }
-        .action-popup-info {
-            font-style: italic;
-            color: #555;
-        }
-        /* (MỚI v39) Style cho popup info pin */
-        .battery-info-popup {
-            font-style: normal !important;
-            color: #333 !important;
-            font-size: 13px; /* To hơn một chút */
-        }
-        .battery-info-popup b {
-            display: inline-block;
-            width: 70px; /* Căn lề cho đẹp */
-            color: #555;
-        }
-
-
-        /* Tooltip khoảng cách */
-        .distance-tooltip {
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            border: 1.5px solid;
-            color: #333 !important;
-            font-weight: bold;
-            font-size: 12px;
-            font-family: 'Times New Roman', Times, serif;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
-            padding: 3px 6px !important;
-            border-radius: 4px;
-            cursor: pointer; 
-        }
-        .distance-tooltip .group-name {
-            font-size: 10px;
-            opacity: 0.8;
-            display: block;
-            text-align: center;
-            border-bottom: 1px dashed #ccc;
-            margin-bottom: 2px;
-        }
-        .distance-tooltip .loading-spinner {
-            font-size: 10px;
-            color: #999;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-left: 4px;
-        }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* Ẩn chỉ dẫn của Leaflet Routing Machine */
-        .leaflet-routing-container { display: none !important; }
-
-        /* (SỬA v38) Bỏ width: 110px, đổi sang 100% */
-        .leaflet-bar button, .leaflet-bar button:hover {
-            width: 100% !important; /*(SỬA)*/
-            height: 32px !important; 
-            font-size: 13px !important;
-            font-weight: 600 !important; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            gap: 6px; 
-            background-color: white !important; 
-            color: #1f2937 !important;
-            margin-bottom: 6px; /*(MỚI v38)*/
-        }
-        .leaflet-bar button:hover { background-color: #f3f4f6 !important; }
-        
-        /* (MỚI v38) CSS cho Bảng Điều Khiển Mới */
-        .custom-controls-container {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: 1px solid #ccc;
-            padding: 8px;
-            width: 150px; /* Chiều rộng cố định cho panel */
-        }
-        .custom-controls-container .leaflet-bar-part {
-            border: none !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .custom-controls-container .leaflet-bar-part:last-child {
-            margin-bottom: 0;
-        }
-        
-        
-        /* Nút Routing */
-        #routing-toggle-btn.bird-mode { background-color: #fffbeb !important; color: #d97706 !important; }
-        #routing-toggle-btn.car-mode { background-color: #3b82f6 !important; color: white !important; }
-        
-        /* Nút Pin */
-        #battery-toggle-btn.pin-mode { background-color: #ecfdf5 !important; color: #059669 !important; }
-        #battery-toggle-btn.battery-mode { background-color: #16a34a !important; color: white !important; }
-
-        /* Nút Filter */
-        #filter-toggle-btn { background-color: #6b7280 !important; color: white !important; }
-        #filter-toggle-btn:hover { background-color: #4b5563 !important; }
-
-        /* (MỚI v42) CSS cho Nút Bật/Tắt Gom Cụm */
-        #cluster-toggle-btn.cluster-on { background-color: #8b5cf6 !important; color: white !important; }
-        #cluster-toggle-btn.cluster-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
-        #cluster-toggle-btn.cluster-off:hover { background-color: #e5e7eb !important; }
-        /* (MỚI v43) CSS cho Nút Bật/Tắt Nhãn KM */
-        #labels-toggle-btn.labels-on { background-color: #f59e0b !important; color: white !important; }
-        #labels-toggle-btn.labels-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
-        #labels-toggle-btn.labels-off:hover { background-color: #e5e7eb !important; }
-        /* (*** MỚI v45 ***) CSS cho Nút Bật/Tắt NHNN */
-        #nhnn-toggle-btn.nhnn-on { background-color: #059669 !important; color: white !important; } /* Màu xanh lá cây */
-        #nhnn-toggle-btn.nhnn-off { background-color: #f3f4f6 !important; color: #4b5563 !important; }
-        #nhnn-toggle-btn.nhnn-off:hover { background-color: #e5e7eb !important; }
-        /* Toastify */
-        .custom-toast { font-family: 'Times New Roman', Times, serif !important; font-size: 14px !important; font-weight: 600 !important; border-radius: 8px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important; }
-        .custom-toast.success { background: linear-gradient(135deg, #10b981, #059669) !important; }
-        .custom-toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb) !important; }
-        .custom-toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
-        .custom-toast.error { background: linear-gradient(135deg, #ef4444, #dc2626) !important; }
-
-        
-        /* CSS CHO ROUTING ĐỘNG */
-        @keyframes route-flow {
-            to {
-                stroke-dashoffset: -20;
-            }
-        }
-        .animated-route-line {
-            animation: route-flow 1s linear infinite;
-        }
-
-        /* === CSS CHO BẢNG ĐIỀU KHIỂN BỘ LỌC (MỚI - Dạng Popup) === */
-        #filter-controls-container {
-            position: absolute;
-            top: 10px; /* (SỬA v38) Đẩy lên trên cùng */
-            right: 170px; /* (SỬA v38) Đặt bên cạnh panel mới */
-            width: 250px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1001; /* Nổi lên trên bảng Rank */
-            font-size: 13px;
-            padding: 10px 15px;
-            font-family: 'Times New Roman', Times, serif;
-            display: none; /* (QUAN TRỌNG) Ẩn đi mặc định */
-            
-            max-height: calc(100vh - 20px); /* (SỬA v38) */
-            overflow-y: auto;
-        }
-        #filter-controls-header {
-            font-size: 16px;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-            /* (MỚI) Căn chỉnh tiêu đề và nút đóng */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        /* (MỚI) CSS cho nút đóng 'X' */
-        #close-filter-btn {
-            font-size: 24px;
-            font-weight: bold;
-            color: #777;
-            cursor: pointer;
-            line-height: 1;
-            padding: 0 5px;
-        }
-        #close-filter-btn:hover {
-            color: #000;
-        }
-        .filter-control {
-            margin-bottom: 8px;
-        }
-        .filter-control label {
-            display: block;
-            margin-bottom: 4px;
-            font-weight: 600;
-            color: #333;
-        }
-        .filter-control input[type="range"] {
-            width: 100%;
-            cursor: pointer;
-        }
-        
-        /* (MỚI v35) CSS cho dropdown filter */
-        .filter-control select {
-            width: 100%;
-            padding: 5px 8px;
-            font-size: 13px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: 'Times New Roman', Times, serif;
-            background-color: white;
-        }
-        
-        /* (MỚI v35) CSS cho nút Reset Filter */
-        #reset-cascading-filter-btn {
-            width: 100%;
-            padding: 5px 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: white;
-            background-color: #dc2626; /* Màu đỏ */
-            border: none;
-            border-radius: 4px;
-            margin-top: 10px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #reset-cascading-filter-btn:hover {
-            background-color: #b91c1c;
-        }
+        max-height: calc(100vh - 20px); 
+        overflow-y: auto;
+        transition: right 0.3s ease; /* Thêm transition */
+    }
+    #filter-controls-header {
+        font-size: 16px;
+        font-weight: bold;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+        /* (MỚI) Căn chỉnh tiêu đề và nút đóng */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    /* (MỚI) CSS cho nút đóng 'X' */
+    #close-filter-btn {
+        font-size: 24px;
+        font-weight: bold;
+        color: #777;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0 5px;
+    }
+    #close-filter-btn:hover {
+        color: #000;
+    }
+    .filter-control {
+        margin-bottom: 8px;
+    }
+    .filter-control label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 600;
+        color: #333;
+    }
+    .filter-control input[type="range"] {
+        width: 100%;
+        cursor: pointer;
+    }
+    
+    /* (MỚI v35) CSS cho dropdown filter */
+    .filter-control select {
+        width: 100%;
+        padding: 5px 8px;
+        font-size: 13px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: 'Times New Roman', Times, serif;
+        background-color: white;
+    }
+    
+    /* (MỚI v35) CSS cho nút Reset Filter */
+    #reset-cascading-filter-btn {
+        width: 100%;
+        padding: 5px 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: white;
+        background-color: #dc2626; /* Màu đỏ */
+        border: none;
+        border-radius: 4px;
+        margin-top: 10px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #reset-cascading-filter-btn:hover {
+        background-color: #b91c1c;
+    }
 /* === (MỚI v41.1) CSS CHO ICON GOM CỤM TÙY CHỈNH === */
-        .my-cluster-icon {
-            /* (Bạn có thể thay màu nền tại đây) */
-            background-color: rgba(245, 130, 49, 0.8); /* Màu cam */
-            border: 2px solid rgba(245, 130, 49, 1);
-            border-radius: 50%; /* Bo tròn */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            
-            /* Dùng flex để căn giữa số đếm */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
-            
-            /* Dịch chuyển icon một chút để nó căn đúng vào tâm */
-            margin-left: -20px;
-            margin-top: -20px;
-        }
+    .my-cluster-icon {
+        /* (Bạn có thể thay màu nền tại đây) */
+        background-color: rgba(245, 130, 49, 0.8); /* Màu cam */
+        border: 2px solid rgba(245, 130, 49, 1);
+        border-radius: 50%; /* Bo tròn */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         
-        /* CSS cho số đếm bên trong */
-        .my-cluster-icon span {
-            /* Không cần thiết lắm vì đã dùng flex, nhưng để cho chắc */
-            line-height: 1; 
-        }
+        /* Dùng flex để căn giữa số đếm */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        text-align: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        
+        /* Dịch chuyển icon một chút để nó căn đúng vào tâm */
+        margin-left: -20px;
+        margin-top: -20px;
+    }
+    
+    /* CSS cho số đếm bên trong */
+    .my-cluster-icon span {
+        /* Không cần thiết lắm vì đã dùng flex, nhưng để cho chắc */
+        line-height: 1; 
+    }
 
-        /* Định nghĩa kích thước dựa trên "cấp độ" */
-        .my-cluster-icon.small {
-            width: 30px;
-            height: 30px;
-            margin-left: -15px;
-            margin-top: -15px;
-            font-size: 13px;
-        }
-        .my-cluster-icon.medium {
-            width: 40px;
-            height: 40px;
-            margin-left: -20px;
-            margin-top: -20px;
-            font-size: 14px;
-        }
-        .my-cluster-icon.large {
-            width: 50px;
-            height: 50px;
-            margin-left: -25px;
-            margin-top: -25px;
-            font-size: 16px;
-        }
+    /* Định nghĩa kích thước dựa trên "cấp độ" */
+    .my-cluster-icon.small {
+        width: 30px;
+        height: 30px;
+        margin-left: -15px;
+        margin-top: -15px;
+        font-size: 13px;
+    }
+    .my-cluster-icon.medium {
+        width: 40px;
+        height: 40px;
+        margin-left: -20px;
+        margin-top: -20px;
+        font-size: 14px;
+    }
+    .my-cluster-icon.large {
+        width: 50px;
+        height: 50px;
+        margin-left: -25px;
+        margin-top: -25px;
+        font-size: 16px;
+    }
 /* (*** MỚI v49 ***) CSS cho Nút Toggle Panel Chính (Nút Hamburger) */
+    #panel-toggle-btn {
+        width: 100%;
+        height: 100%;
+        font-size: 18px !important;
+        background-color: #059669 !important; /* (SỬA v49) MÀU XANH LÁ */
+        color: white !important; 
+        border-radius: 8px; /* Khớp với container */
+        border: none !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #panel-toggle-btn:hover {
+        background-color: #047857 !important; /* (SỬA v49) Xanh đậm hơn */
+    }
+
+    /* (*** MỚI v49 ***) CSS cho Nút Thu Gọn (Collapse) */
+    #panel-collapse-btn { 
+        background-color: #6b7280 !important; 
+        color: white !important; 
+        /* (SỬA v49) Căn giữa icon (vì không còn chữ) */
+        justify-content: center !important; 
+        padding-left: 0 !important;
+    }
+    #panel-collapse-btn:hover { background-color: #4b5563 !important; }
+
+
+    /* (*** MỚI v47 ***) CSS Ẩn/Hiện Wrapper chứa các nút */
+    .buttons-wrapper {
+        display: block; /* Hiển thị mặc định (cho desktop) */
+    }
+    
+    /* === (SỬA v55) CSS MỚI CHO BỐ CỤC CHUNG === */
+    
+    /* 1. Panel Bảng Xếp Hạng: LUÔN Ở BÊN TRÁI */
+    /* (Vị trí gốc được giữ nguyên) */
+
+
+    /* 2. Panel Filter: (SỬA v55) LUÔN Ở BÊN PHẢI */
+    #filter-controls-container {
+        /* Vị trí mặc định lùi khỏi Search Bar */
+        right: 10px; 
+        left: auto; 
+        z-index: 2000; 
+    }
+
+    
+    /* 3. Panel Nút Bấm: LUÔN ở góc TRÊN bên phải */
+    .leaflet-top.leaflet-right {
+        top: 80px;
+        bottom: auto; 
+        right: 10px;
+        /* (*** SỬA LỖI v55 ***) Đảm bảo Menu ☰ nổi lên trên Search và Filter */
+        z-index: 1005; 
+    }
+    
+    /* 4. Panel chính (custom-controls-container) LUÔN là nút ☰ */
+    .custom-controls-container {
+        width: 40px; /* Kích thước nút toggle */
+        height: 40px;
+        padding: 0; /* Xóa padding */
+        overflow: hidden; /* Ẩn các nút con */
+        background: transparent; /* Tắt nền trắng của panel */
+        border: none; /* Tắt viền của panel */
+        box-shadow: none; /* Tắt bóng của panel */
+        transition: width 0.3s ease; /* Thêm transition */
+    }
+
+    /* 5. Panel chính khi được BẬT (expanded) */
+    .custom-controls-container.expanded {
+        width: 180px; /* DÀI RA CHÚT (từ 150px) */
+        height: auto;
+        padding: 8px; /* Thêm lại padding */
+        background: rgba(255, 255, 255, 0.9); /* Thêm lại nền */
+        border: 1px solid #ccc; /* Thêm lại viền */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Thêm lại bóng */
+    }
+    
+    /* 6. Ẩn wrapper nút con MẶC ĐỊNH */
+    .buttons-wrapper {
+        display: none; 
+    }
+    
+    /* 7. Hiển thị wrapper khi panel được BẬT */
+    .custom-controls-container.expanded .buttons-wrapper {
+        display: block;
+    }
+
+    /* 8. Ẩn nút toggle (hamburger) khi panel được BẬT */
+    .custom-controls-container.expanded #panel-toggle-btn {
+        display: none;
+    }
+
+    /* 9. Hiển thị nút toggle (hamburger) MẶC ĐỊNH */
+    #panel-toggle-btn {
+        display: flex; /* Hiển thị nút hamburger */
+    }
+    
+    /* 10. Ẩn chữ (span) mặc định (khi co lại) */
+    .custom-controls-container .button-text {
+        display: none; 
+    }
+
+    /* 11. Hiển thị chữ khi panel bung ra */
+    .custom-controls-container.expanded .button-text {
+        display: inline; /* Hiện lại chữ */
+    }
+    
+    /* 12. Các nút con bên trong khi bung ra */
+    .custom-controls-container.expanded .leaflet-bar-part {
+        width: 100% !important; /* Các nút con 100% width */
+        height: 40px !important;
+        font-size: 16px !important;
+        /* (MỚI v49) Căn lề chữ cho đẹp (hết díu) */
+        justify-content: flex-start !important; 
+        padding-left: 10px !important;
+    }
+    
+    /* 13. Nút hamburger (khi chưa bung) */
+    #panel-toggle-btn.leaflet-bar-part {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 16px !important;
+        /* (MỚI v49) Ghi đè: Giữ nút ☰ ở giữa */
+        justify-content: center !important;
+        padding-left: 0 !important;
+    }
+
+    /* 14. (Ghi đè Desktop) Áp dụng luật mobile cho desktop */
+    @media (min-width: 769px) {
         #panel-toggle-btn {
-            width: 100%;
-            height: 100%;
-            font-size: 18px !important;
-            background-color: #059669 !important; /* (SỬA v49) MÀU XANH LÁ */
-            color: white !important;             /* (SỬA v49) MÀU TRẮNG */
-            border-radius: 8px; /* Khớp với container */
-            border: none !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; /* Vẫn hiển thị nút ☰ */
         }
-        #panel-toggle-btn:hover {
-            background-color: #047857 !important; /* (SỬA v49) Xanh đậm hơn */
-        }
-
-        /* (*** MỚI v49 ***) CSS cho Nút Thu Gọn (Collapse) */
-        #panel-collapse-btn { 
-            background-color: #6b7280 !important; 
-            color: white !important; 
-            /* (SỬA v49) Căn giữa icon (vì không còn chữ) */
-            justify-content: center !important; 
-            padding-left: 0 !important;
-        }
-        #panel-collapse-btn:hover { background-color: #4b5563 !important; }
-
-
-        /* (*** MỚI v47 ***) CSS Ẩn/Hiện Wrapper chứa các nút */
         .buttons-wrapper {
-            display: block; /* Hiển thị mặc định (cho desktop) */
+            display: none; /* Vẫn ẩn wrapper */
         }
-        
-        /* === (SỬA v49) CSS MỚI (Áp dụng cho TẤT CẢ màn hình) === */
-        
-        /* 1. Panel Bảng Xếp Hạng: LUÔN Ở BÊN TRÁI */
-        /* (Vị trí gốc được giữ nguyên) */
+        /* Sửa lại panel Filter trên desktop */
+         #filter-controls-container {
+            width: 250px; /* Trả về độ rộng cũ */
+            right: 320px; /* Giữ nguyên vị trí lùi khỏi Search */
+            left: auto;
+        }
+    }
+    #close-filter-btn:hover {
+        color: #000;
+    }
+
+    /* (*** MỚI v50 ***) CSS cho nút đóng Bảng Xếp Hạng */
+    #close-rank-btn {
+        font-size: 24px;
+        font-weight: bold;
+        color: #777;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0 5px;
+        float: right; /* Căn sang phải */
+    }
+    #close-rank-btn:hover {
+        color: #000;
+    }
+    
+    /* (SỬA v50) Sửa Header của Bảng Xếp Hạng để chứa nút X */
+      #rank-table-header {
+        display: block; /* Đảm bảo nút X (dùng float) hoạt động */
+      }
 
 
-        /* 2. Panel Filter: (SỬA v49) LUÔN Ở BÊN PHẢI */
-        #filter-controls-container {
-            right: 10px;    /* (SỬA v49) Chuyển sang phải */
-            left: auto;     /* (SỬA v49) Hủy bên trái */
-            z-index: 1003;  /* (SỬA v49) Nổi lên trên cùng */
-        }
+    /* === SỬA ĐỔI VỊ TRÍ VÀ HIỂN THỊ CỦA THANH TÌM KIẾM (SỬA LỖI v55) === */
+    #search-control-container {
+        position: absolute;
+        top: 10px;
+        /* (SỬA LỖI v55) Mặc định lùi sang trái Menu ☰ */
+        right: 10px; /* 10px (margin menu) + 40px (menu rộng) + 10px (gap) = 60px */
+        width: 250px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1999; /* (SỬA LỖI v55) Nổi lên trên Menu ☰ (1005) và Filter (1003) */
+        padding: 8px;
+        flex-direction: column;
+        height: auto;
+        transition: right 0.3s ease; /* Thêm transition để di chuyển mượt mà */
+    }
 
-        
-        /* 3. Panel Nút Bấm: LUÔN ở góc TRÊN bên phải */
-        .leaflet-top.leaflet-right {
-            top: 10px;
-            bottom: auto; 
-            right: 10px;
-            /* (MỚI v49) Đảm bảo menu ☰ (z-1000) nằm dưới Filter (z-1003) */
-            z-index: 1000; 
-        }
-        
-        /* 4. Panel chính (custom-controls-container) LUÔN là nút ☰ */
-        .custom-controls-container {
-            width: 40px; /* Kích thước nút toggle */
-            height: 40px;
-            padding: 0; /* Xóa padding */
-            overflow: hidden; /* Ẩn các nút con */
-            background: transparent; /* Tắt nền trắng của panel */
-            border: none; /* Tắt viền của panel */
-            box-shadow: none; /* Tắt bóng của panel */
-        }
+    /* (MỚI v54) Vùng chứa Input & Button */
+    .search-input-group {
+        display: flex;
+        gap: 5px;
+    }
+    #search-control-container input {
+        flex-grow: 1;
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        font-family: 'Times New Roman', Times, serif;
+        outline: none;
+    }
+    #search-control-container button {
+        padding: 6px 10px;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    #search-control-container button:hover {
+        background-color: #2563eb;
+    }
 
-        /* 5. Panel chính khi được BẬT (expanded) */
-        .custom-controls-container.expanded {
-            width: 180px; /* (SỬA v49) DÀI RA CHÚT (từ 150px) */
-            height: auto;
-            padding: 8px; /* Thêm lại padding */
-            background: rgba(255, 255, 255, 0.9); /* Thêm lại nền */
-            border: 1px solid #ccc; /* Thêm lại viền */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Thêm lại bóng */
-        }
-        
-        /* 6. Ẩn wrapper nút con MẶC ĐỊNH */
-        .buttons-wrapper {
-            display: none; 
-        }
-        
-        /* 7. Hiển thị wrapper khi panel được BẬT */
-        .custom-controls-container.expanded .buttons-wrapper {
-            display: block;
-        }
 
-        /* 8. Ẩn nút toggle (hamburger) khi panel được BẬT */
-        .custom-controls-container.expanded #panel-toggle-btn {
-            display: none;
-        }
+    /* === KHẮC PHỤC TRÙNG LẤN VỚI MENU MỞ RỘNG (EXPANDED) === */
+    
+    /* (SỬA LỖI v55) Đẩy Thanh Tìm Kiếm ra khi Menu ☰ mở rộng */
+    .custom-controls-container.expanded + #search-control-container { 
+        /* Menu rộng 180px, để gap 10px */
+        right: 190px; 
+    }
 
-        /* 9. Hiển thị nút toggle (hamburger) MẶC ĐỊNH */
-        #panel-toggle-btn {
-            display: flex; /* Hiển thị nút hamburger */
-        }
-        
-        /* 10. Ẩn chữ (span) mặc định (khi co lại) */
-        .custom-controls-container .button-text {
-            display: none; 
-        }
+    /* (SỬA LỖI v55) Đẩy Panel Filter ra khi Menu ☰ mở rộng */
+    .custom-controls-container.expanded + #search-control-container + #filter-controls-container {
+        /* 190px (right Search) + 250px (Search width) + 10px (gap) = 450px */
+        right: 10px; 
+    }
 
-        /* 11. Hiển thị chữ khi panel bung ra */
-        .custom-controls-container.expanded .button-text {
-            display: inline; /* Hiện lại chữ */
-        }
-        
-        /* 12. Các nút con bên trong khi bung ra */
-        .custom-controls-container.expanded .leaflet-bar-part {
-            width: 100% !important; /* Các nút con 100% width */
-            height: 40px !important;
-            font-size: 16px !important;
-            /* (MỚI v49) Căn lề chữ cho đẹp (hết díu) */
-            justify-content: flex-start !important; 
-            padding-left: 10px !important;
-        }
-        
-        /* 13. Nút hamburger (khi chưa bung) */
-        #panel-toggle-btn.leaflet-bar-part {
-            width: 40px !important;
-            height: 40px !important;
-            font-size: 16px !important;
-            /* (MỚI v49) Ghi đè: Giữ nút ☰ ở giữa */
-            justify-content: center !important;
-            padding-left: 0 !important;
-        }
+    /* (Mặc định: Menu ☰ KHÔNG MỞ RỘNG) - Đảm bảo Filter lùi khỏi Search bar */
+    #search-control-container + #filter-controls-container {
+        right: 10px; /* 60px (right Search) + 250px (Search width) + 10px (gap) = 320px */
+    }
 
-        /* 14. (Ghi đè Desktop) Áp dụng luật mobile cho desktop */
-        @media (min-width: 769px) {
-            #panel-toggle-btn {
-                display: flex; /* (SỬA v48) Vẫn hiển thị nút ☰ */
-            }
-            .buttons-wrapper {
-                display: none; /* (SỬA v48) Vẫn ẩn wrapper */
-            }
-            /* (MỚI v49) Sửa lại panel Filter trên desktop */
-             #filter-controls-container {
-                width: 250px; /* Trả về độ rộng cũ */
-                right: 10px; /* Vẫn ở bên phải */
-                left: auto;
-            }
-        }
-        #close-filter-btn:hover {
-            color: #000;
-        }
+    /* === STYLE CHO PHẦN KẾT QUẢ/GỢI Ý TÌM KIẾM (MỚI v54) === */
+    #search-results-container {
+        max-height: 200px;
+        overflow-y: auto;
+        border-top: 1px solid #eee;
+        margin-top: 8px;
+        padding-top: 5px;
+        display: none; /* Mặc định ẩn */
+    }
+    /* === (MỚI v57) CSS cho Tooltip Tùy Chỉnh === */
 
-        /* (*** MỚI v50 ***) CSS cho nút đóng Bảng Xếp Hạng */
-        #close-rank-btn {
-            font-size: 24px;
-            font-weight: bold;
-            color: #777;
-            cursor: pointer;
-            line-height: 1;
-            padding: 0 5px;
-            float: right; /* Căn sang phải */
-        }
-        #close-rank-btn:hover {
-            color: #000;
-        }
-        
-        /* (SỬA v50) Sửa Header của Bảng Xếp Hạng để chứa nút X */
-         #rank-table-header {
-            /* ... (các style cũ giữ nguyên) ... */
-            display: block; /* Đảm bảo nút X (dùng float) hoạt động */
-         }
-    </style>
+.search-result-item {
+    position: relative; /* Quan trọng: Để tooltip căn theo vị trí này */
+    /* ... các thuộc tính cũ ... */
+}
+
+/* Ẩn tooltip mặc định của trình duyệt */
+.search-result-item[title]:hover {
+    pointer-events: none; /* Ngăn chặn Tooltip mặc định */
+}
+
+.search-result-item::before,
+.search-result-item::after {
+    --arrow-size: 6px; /* Kích thước mũi tên */
+    position: absolute;
+    display: none; /* Mặc định ẩn */
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 2001; /* Đảm bảo nổi lên trên mọi thứ */
+}
+
+/* Tooltip: Dùng ::after */
+.search-result-item::after {
+    content: attr(data-title); /* Lấy nội dung từ thuộc tính data-title */
+    top: calc(100% + var(--arrow-size) + 5px); /* Vị trí bên dưới item + khoảng cách mũi tên */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    padding: 6px 10px;
+    min-width: 150px;
+    max-width: 250px;
+    
+    background-color: #333; /* Màu nền đen */
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: normal; /* Cho phép chữ xuống dòng */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Mũi tên: Dùng ::before */
+.search-result-item::before {
+    content: '';
+    top: calc(100% + 5px); /* Vị trí của mũi tên */
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    
+    width: var(--arrow-size);
+    height: var(--arrow-size);
+    background-color: #333; /* Màu nền đen */
+    border-radius: 2px;
+}
+
+/* HIỂN THỊ khi HOVER */
+.search-result-item:hover::before,
+.search-result-item:hover::after {
+    display: block;
+    opacity: 1;
+}
+</style>
 </head>
 <body>
 
@@ -716,7 +858,16 @@
     <div id="rank-table-body">
     </div>
 </div>
-
+<div id="search-control-container">
+    <div class="search-input-group">
+        <input type="text" id="termid-search-input" placeholder="Tìm theo Mã CN hoặc Tên HUB...">
+        <button id="search-button" onclick="searchByTermId()">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </div>
+    <div id="search-results-container">
+        </div>
+</div>
 <div id="filter-controls-container">
     <div id="filter-controls-header">
         Tùy Chỉnh Bản Đồ
@@ -749,6 +900,339 @@
 
 
 <script>
+
+    // Hàm giả định để lấy ID duy nhất cho điểm (nếu bạn chưa có)
+function getUniquePointId(lat, lon) {
+    // Có thể dùng hash hoặc kết hợp Lat/Lon thành chuỗi
+    return `P_${Math.round(lat*10000)}_${Math.round(lon*10000)}`;
+}
+
+// Hàm giả định để cập nhật hiển thị Marker sau khi nhóm thay đổi
+function updateMarkerIcon(marker, groupColor) {
+    // TODO: Triển khai logic thay đổi icon Marker (ví dụ: đổi màu icon pin)
+    // Hiện tại: Giả định bạn có hàm renderMarkerIcon(level, amount, color)
+    // Ví dụ: marker.setIcon(createBatteryIcon(100, 100000, groupColor));
+    
+    // Đơn giản nhất: Thay đổi màu viền icon nếu bạn dùng L.DivIcon
+    const element = marker.getElement();
+    if (element) {
+        const container = element.querySelector('.battery-icon-container');
+        if (container) {
+            container.style.borderColor = groupColor;
+        }
+    }
+}
+/**
+ * Đặt trung tâm bản đồ và zoom đến vị trí của một Marker.
+ */
+function setMapCenterFromMarker(pointId) {
+    const point = allPoints.find(p => String(p.id) === String(pointId));
+    
+    if (!point) {
+        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
+        console.error("Lỗi setMapCenterFromMarker: Không tìm thấy đối tượng điểm trong allPoints.");
+        return;
+    }
+
+    if (!point.latlng) {
+        showToast(`Lỗi: Điểm ${pointId} không có tọa độ.`, "error");
+        console.error("Lỗi setMapCenterFromMarker: Điểm không có thuộc tính latlng.");
+        return;
+    }
+
+    // FlyTo sẽ đặt tâm bản đồ và zoom đến cấp độ 15
+    map.flyTo(point.latlng, 15);
+    
+    // (Tùy chọn) Kích hoạt click để mở popup nếu bạn muốn
+    if (point.marker) {
+        // Tắt popup hiện tại trước
+        if (currentPopup) {
+            map.closePopup(currentPopup);
+            currentPopup = null;
+        }
+        // Kích hoạt click (sẽ mở popup hành động/pin)
+        point.marker.fire('click'); 
+    }
+    
+    showToast(`Đã chuyển đến Tâm Điểm: ${pointId}`, 'info');
+}
+/**
+ * (SỬA LỖI UI) Tạo nội dung HTML cho Popup Hành Động (Action Popup).
+ * Đã thêm nút "Hủy Nhóm" (chỉ khi điểm là Tâm Nhóm).
+ * @param {string} pointId - ID duy nhất của điểm (Marker).
+ * @param {string} currentGroupId - ID của nhóm hiện tại mà điểm đang thuộc về (có thể là null).
+ */
+function createActionPopupContent(pointId, currentGroupId) {
+    let content = `
+        <div class="action-popup-header">Hành Động cho Điểm ${pointId}</div>
+        <div class="action-popup-buttons">
+            
+            <button class="btn-new" onclick="setMapCenterFromMarker('${pointId}')">
+                <i class="fas fa-bullseye"></i> Chọn làm Tâm Bản Đồ
+            </button>
+            
+            <hr style="margin: 5px 0; border-top: 1px solid #ddd;">
+            
+            <button class="btn-new" onclick="popup_createGroup('${pointId}')" style="margin-bottom: 5px;">
+                <i class="fa-solid fa-plus"></i> Tạo Nhóm Mới (làm tâm)
+            </button>
+            <hr style="margin: 5px 0; border-top: 1px solid #ddd;">
+    `;
+    
+    // --- Lấy thông tin Nhóm hiện tại ---
+    let isCenterPoint = false;
+    const currentGroup = allGroups.find(g => String(g.id) === String(currentGroupId));
+    if (currentGroup && String(currentGroup.centerPoint.id) === String(pointId)) {
+        isCenterPoint = true;
+    }
+    
+    // 1. THÊM NÚT HỦY NHÓM (CHỈ CHO ĐIỂM TÂM)
+    if (isCenterPoint) {
+        content += `
+            <button 
+                class="btn-delete" 
+                style="background-color: #dc2626; margin-bottom: 5px;"
+                onclick="popup_deleteGroup('${currentGroupId}')"
+            >
+                <i class="fa-solid fa-trash-alt"></i> Hủy Nhóm ${currentGroup.groupNumber}
+            </button>
+            <hr style="margin: 5px 0; border-top: 1px solid #ddd;">
+        `;
+    }
+
+    // 2. Lấy danh sách các nhóm có thể chuyển đến (trừ nhóm hiện tại)
+    const availableGroups = Object.keys(groups).filter(
+        groupName => groups[groupName].id !== currentGroupId
+    );
+    
+    // Nút cho phép chuyển điểm sang nhóm khác
+    if (availableGroups.length > 0) {
+        content += `<div class="action-popup-info" style="margin-top: 5px;">Chọn nhóm để chuyển đến:</div>`;
+        
+        availableGroups.forEach(groupName => {
+            const groupId = groups[groupName].id;
+            const groupColor = groups[groupName].color;
+            
+            // Nút Chuyển Nhóm
+            content += `
+                <button 
+                    class="btn-move" 
+                    style="background-color: ${groupColor};"
+                    onclick="movePointToGroup('${pointId}', '${groupId}')"
+                >
+                    <i class="fas fa-layer-group"></i> Chuyển sang ${groupName}
+                </button>
+            `;
+        });
+    } else if (currentGroupId) { 
+         const currentGroupDisplayName = Object.keys(groups).find(key => groups[key].id === currentGroupId) || currentGroupId;
+         content += `<div class="action-popup-info">Đang thuộc **${currentGroupDisplayName}**.</div>`;
+    } else {
+         content += `<div class="action-popup-info">Chưa có nhóm nào khác để chuyển đến.</div>`;
+    }
+
+    content += `</div>`;
+    return content;
+}
+
+/**
+ * (SỬA LỖI CHÍNH) Hàm chuyển một điểm từ nhóm cũ sang nhóm mới (gọi từ Popup).
+ * Đã: 1. Đóng Popup sau khi chuyển (Fix Lỗi 3). 2. Đảm bảo loại trừ lẫn nhau (Fix Lỗi 2).
+ */
+function movePointToGroup(pointId, targetGroupId) {
+    // 1. Tìm thông tin nhóm mới
+    const newGroupNameKey = Object.keys(groups).find(key => groups[key].id === targetGroupId);
+    const newGroup = allGroups.find(g => String(g.id) === String(targetGroupId));
+    
+    // Tìm điểm cần chuyển
+    const pointToMove = allPoints.find(p => String(p.id) === String(pointId));
+    
+    if (!pointToMove || !newGroup || !newGroupNameKey) {
+        showToast("Lỗi: Không tìm thấy điểm hoặc nhóm đích.", "error");
+        return;
+    }
+
+    const oldGroupId = pointToMove.groupId;
+    
+    if (oldGroupId === targetGroupId) {
+        showToast(`Điểm ${pointId} đã ở trong ${newGroupNameKey}.`, "warning");
+        if (currentPopup) map.closePopup(); // Fix Lỗi 3: Đóng popup
+        return;
+    }
+
+    // === 2. XÓA ĐIỂM KHỎI NHÓM CŨ (MUTUAL EXCLUSION) ===
+    if (oldGroupId) {
+        const oldGroup = allGroups.find(g => String(g.id) === String(oldGroupId));
+        if (oldGroup) {
+            // Xóa khỏi danh sách points trong allGroups (dữ liệu map)
+            oldGroup.points = oldGroup.points.filter(p => p.id !== pointToMove.id);
+        }
+        
+        // Đồng bộ biến 'groups' (cho UI Popup) - XÓA KHỎI DANH SÁCH ID
+        const oldGroupNameKey = Object.keys(groups).find(key => groups[key].id === oldGroupId);
+        if (groups[oldGroupNameKey]) {
+            groups[oldGroupNameKey].pointIds = groups[oldGroupNameKey].pointIds.filter(id => id !== pointToMove.id);
+        }
+    }
+    // =========================================================
+
+    // 3. Cập nhật ID nhóm mới cho điểm và thêm vào nhóm mới
+    pointToMove.groupId = targetGroupId;
+    newGroup.points.push(pointToMove);
+
+    // 4. Đồng bộ biến 'groups' (cho UI Popup) - THÊM VÀO DANH SÁCH ID
+    if (!groups[newGroupNameKey].pointIds.includes(pointToMove.id)) {
+        groups[newGroupNameKey].pointIds.push(pointToMove.id);
+    }
+    
+    // 5. Cập nhật hiển thị và ĐÓNG POPUP (Fix Lỗi 3)
+    if (currentPopup) map.closePopup(); 
+
+    drawAllGroups(); 
+    updateRankTable();
+    updateFilterOptions();
+
+    Toastify({
+        text: `Đã chuyển điểm ${pointId} sang ${newGroupNameKey}`,
+        className: "custom-toast success",
+    }).showToast();
+}
+/**
+ * (MỚI) Tìm và trả về đối tượng Leaflet Marker từ ID điểm
+ */
+function getMarkerByPointId(pointId) {
+    // Trả về Marker từ bản đồ lưu trữ
+    return allMarkers[pointId]; 
+}
+/**
+ * Hàm Khởi tạo và Thêm Marker vào Map
+ */
+function createAndAddMarker(lat, lon, data) {
+    // 1. Tạo Marker (Marker KHÔNG CÓ Popup TĨNH lúc này)
+    const pointId = data.pointId || getUniquePointId(lat, lon); 
+    const marker = L.marker([lat, lon], {
+        // ... các tùy chọn icon ...
+    });
+
+    marker.pointId = pointId; // Lưu ID vào đối tượng Marker
+    marker.data = data; // Lưu dữ liệu gốc
+
+    // 2. GẮN SỰ KIỆN CLICK để mở Popup HÀNH ĐỘNG
+    marker.on('click', function(e) {
+        
+        // --- 2.1. Tìm Nhóm Hiện Tại ---
+        let currentGroupId = null;
+        for (const name in groups) {
+            if (groups[name].pointIds.includes(marker.pointId)) {
+                currentGroupId = groups[name].id;
+                break;
+            }
+        }
+        
+        // --- 2.2. Tạo Nội Dung Popup ĐỘNG ---
+        // SỬ DỤNG HÀM MÀ TÔI VỪA CHỈ BẠN
+        const content = createActionPopupContent(marker.pointId, currentGroupId);
+        
+        // --- 2.3. Gán Popup MỚI và Mở ---
+        marker.unbindPopup(); // RẤT QUAN TRỌNG: Gỡ bỏ popup cũ
+        marker.bindPopup(content, { 
+            className: 'action-popup', // Áp dụng CSS Hành Động
+            closeButton: true,
+            offset: L.point(0, -10)
+        }).openPopup();
+    });
+
+    // 3. Thêm Marker vào Map
+    marker.addTo(map);
+    return marker;
+}
+/** * Ví dụ về cách tạo một mục kết quả tìm kiếm
+ * và gán Tooltip tùy chỉnh (dùng thuộc tính data-title)
+ */
+function createSearchResultItem(fullText, hubName) {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+
+    // *** BƯỚC QUAN TRỌNG: Gán nội dung đầy đủ vào data-title ***
+    // Thay item.title = fullText;
+    item.setAttribute('data-title', fullText); 
+    
+    // Phần hiển thị trên bảng kết quả (có thể bị cắt)
+    const displayLength = 30;
+    const truncatedText = fullText.length > displayLength 
+        ? fullText.substring(0, displayLength) + '...' 
+        : fullText;
+    
+    item.innerHTML = `${truncatedText} <span class="hub-name"> (${hubName})</span>`;
+    
+    return item;
+}
+
+// Ví dụ sử dụng:
+const container = document.getElementById('search-results-container');
+const longDescription = "Tòa nhà này là Trụ sở chính và điểm giao dịch lớn nhất của ngân hàng ABC tại trung tâm thành phố.";
+const hubInfo = "Hub A";
+
+const resultItem = createSearchResultItem(longDescription, hubInfo);
+container.appendChild(resultItem);
+/**
+ * (SỬA ĐỔI v54) Hàm tìm kiếm điểm trên bản đồ theo TERMID hoặc Tên HUB.
+ * Hiển thị kết quả trong Autocomplete/List.
+ */
+function searchByTermId() {
+    const input = document.getElementById('termid-search-input');
+    const resultsContainer = document.getElementById('search-results-container');
+    const searchTerm = String(input.value).trim().toUpperCase();
+
+    // Xóa kết quả cũ
+    resultsContainer.innerHTML = '';
+
+    if (!searchTerm) {
+        resultsContainer.style.display = 'none';
+        showToast("Vui lòng nhập Mã CN hoặc Tên HUB để tìm kiếm.", "warning");
+        return;
+    }
+
+    // Lọc các điểm (PGD/ATM) dựa trên TERMID hoặc TENHUB
+    const searchResults = allPoints.filter(p => 
+        !p.nhnn && (
+            String(p.id).toUpperCase().includes(searchTerm) || 
+            (p.tenHub && String(p.tenHub).toUpperCase().includes(searchTerm))
+        )
+    );
+
+    if (searchResults.length > 0) {
+        resultsContainer.style.display = 'block';
+        
+        searchResults.slice(0, 10).forEach(point => { // Giới hạn 10 kết quả
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            
+            // Xây dựng nội dung item
+            let content = `ID: ${point.id}`;
+            if (point.tenHub) {
+                content += `<span class="hub-name"> (${point.tenHub})</span>`;
+            }
+            
+            item.innerHTML = content;
+            item.dataset.pointId = point.id;
+
+            // Gắn sự kiện click để focus vào điểm
+            item.addEventListener('click', () => {
+                focusOnPoint(point.id);
+                resultsContainer.style.display = 'none'; // Ẩn danh sách sau khi click
+                input.value = point.id; // Đặt TERMID vào ô tìm kiếm
+            });
+
+            resultsContainer.appendChild(item);
+        });
+        
+        showToast(`Tìm thấy ${searchResults.length} kết quả.`, "info");
+    } else {
+        resultsContainer.style.display = 'none';
+        showToast(`Không tìm thấy kết quả nào với từ khóa: ${searchTerm}`, "error");
+    }
+}
     // (XÓA v35) Xóa bỏ CHI_NHANH_TO_VUNG_MAP, vì VUNG giờ đã có trong data
 
     // --- 1. Khởi tạo Bản đồ ---
@@ -782,8 +1266,9 @@
     // Hàng đợi Routing
     let routingQueue = [];
     let isProcessingQueue = false;
+    let groups = {}; // KHỞI TẠO RỖNG ĐỂ CHỈ CHỨA NHÓM BẠN TẠO
     const ROUTING_DELAY_MS = 500; 
-    
+    let allMarkers = {}; // Dùng để lưu trữ { pointId: markerObject }
     let isBirdMode = true; // Mặc định là CHIM BAY
     
     // (MỚI v37) Trạng thái xem Pin
@@ -1171,7 +1656,14 @@
                 L.DomEvent.stopPropagation(e);
                 toggleNhnn();
             };
-            
+            // (*** MỚI ***) Nút LƯU/EXPORT DỮ LIỆU NHÓM
+            const saveButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg btn-add', buttonsWrapper);
+            saveButton.id = 'save-groups-btn';
+            saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up w-4 h-4"></i> <span class="button-text">Lưu Dữ Liệu Nhóm</span>';
+            saveButton.onclick = (e) => {
+                L.DomEvent.stopPropagation(e);
+                exportGroupsData(); // Gọi hàm xử lý chính
+            };
             // --- Hết các nút con ---
 
             // (MỚI v47) Khi click vào bản đồ, đóng panel (nếu đang mở trên di động)
@@ -1191,92 +1683,286 @@
     // Thêm control mới vào bản đồ
     new L.Control.MasterControls({ position: 'topright' }).addTo(map);
     // --- 5. Các Hàm Chức năng ---
+// Tên khóa dùng để lưu trữ trong localStorage
+const LOCAL_STORAGE_KEY = 'HMTQ_SAVED_GROUPS_V2'; // Dùng V2 để đảm bảo lưu Polyline Cache
+
+/**
+ * (SỬA ĐỔI) Hàm xuất và LƯU dữ liệu nhóm đã tạo vào Local Storage.
+ */
+function exportGroupsData() {
+    if (allGroups.length === 0) {
+        // Xóa dữ liệu cũ nếu không còn nhóm nào
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        showToast("Đã xóa dữ liệu nhóm cũ trong trình duyệt.", "warning");
+        return;
+    }
     
-    /**
-     * (SỬA ĐỔI v44: Tách riêng marker NHNN)
-     */
-    function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr) { 
-        // (SỬA v44.1) Logic check 'isNHNN' này mạnh hơn
-        const isNHNN = (nhnn === true || String(nhnn).toLowerCase() === 'true' || String(nhnn) === '1');
-        
-        // ... (code phân tích dữ liệu) ...
-        const cleanChinhanh = chinhanh ? String(chinhanh).trim() : 'Không có';
-        const cleanVung = vung ? String(vung).trim() : 'Không xác định';
-        const cleanTonQuy = parseFloat(String(tonQuyStr).replace(/[\s,]/g, '')) || 0;
-        const cleanHanMuc = parseFloat(String(hanMucStr).replace(/[\s,]/g, '')) || 0;
-        const isVuotHanMuc = String(vuotHanMucStr).trim() !== '-' && String(vuotHanMucStr).trim() !== '';
+    // 1. Chuyển đổi dữ liệu thô sang cấu trúc gọn gàng
+    const exportedData = allGroups.map(group => {
+        // Lọc ra ID của tất cả các điểm trong nhóm (bao gồm điểm tâm)
+        const memberIds = group.points.map(p => p.id); 
 
-        
-        // (*** SỬA v44 ***) Logic tạo marker
-        const newMarker = L.marker(latlng, { 
-            icon: isNHNN ? createNHNNIcon() : createPGDIcon() 
-        });
+        return {
+            group_id: group.id,
+            group_number: group.groupNumber,
+            color: group.color,
+            center_point: {
+                id: group.centerPoint.id,
+                lat: group.centerPoint.latlng.lat,
+                lon: group.centerPoint.latlng.lng,
+            },
+            member_ids: memberIds, // <--- ĐÃ GOM CẢ ĐIỂM TÂM
+            // LƯU CACHE POLYLINE 
+            polyline_cache: group.polylineCache, 
+            member_count: memberIds.length
+        };
+    });
+    
+    const jsonOutput = JSON.stringify(exportedData); 
+    
+    // 2. LƯU VÀO LOCAL STORAGE
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, jsonOutput);
+        console.log("=== DỮ LIỆU NHÓM ĐÃ LƯU VÀO LOCAL STORAGE ===");
+        console.log(JSON.parse(jsonOutput));
+        showToast("Đã lưu trạng thái nhóm thành công!", "success");
+    } catch (e) {
+        showToast("Lỗi lưu trữ! Trình duyệt quá đầy hoặc đang ở chế độ ẩn danh.", "error");
+    }
+}
 
-        // (*** MỚI v44 ***)
-        // Nếu là NHNN, thêm thẳng vào lớp NHNN và KHÔNG tham gia gom cụm
-        if (isNHNN) {
-            newMarker.addTo(nhnnMarkersLayer); 
+// (MỚI) Hàm hỗ trợ lấy dữ liệu điểm gốc từ ID
+function getPointDataById(pointId) {
+    return allPoints.find(p => p.id === pointId);
+}
+
+/**
+ * (SỬA LỖI PHỤC HỒI CACHE) Hàm tải và phục hồi dữ liệu nhóm đã lưu.
+ * @param {Array} savedGroupsData - Dữ liệu JSON đã lưu trữ.
+ */
+function loadSavedGroups(savedGroupsData) {
+    if (!Array.isArray(savedGroupsData) || savedGroupsData.length === 0) {
+        return;
+    }
+
+    // 1. Xóa trạng thái nhóm hiện tại và các nhóm cũ
+    allGroups = [];
+    groups = {};
+    allPoints.forEach(p => p.groupId = null);
+
+    let loadCount = 0;
+    
+    // 2. Tải từng nhóm
+    savedGroupsData.forEach(savedGroup => {
+        
+        const centerPointId = savedGroup.center_point.id;
+        const centerPointData = getPointDataById(centerPointId);
+
+        if (!centerPointData) {
+            console.warn(`Bỏ qua nhóm ${savedGroup.group_id}: Không tìm thấy điểm tâm ID ${centerPointId}.`);
+            return;
         }
-        // Nếu không phải NHNN, marker sẽ được quản lý bởi `updateMarkersVisibility`
-        
-        const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
 
-        const newPointData = {
-            id: pointId, 
-            latlng: latlng,
-            marker: newMarker,
-            groupId: isNHNN ? 'REFERENCE' : null, 
-            chinhanh: cleanChinhanh, 
-            vung: cleanVung, 
-            isVisible: true,
-            nhnn: isNHNN, // (Quan trọng) Lưu lại giá trị đã được chuẩn hóa
-            tonQuy: cleanTonQuy,
-            hanMuc: cleanHanMuc,
-            vuotHanMuc: isVuotHanMuc
+        const newGroup = {
+            id: savedGroup.group_id,
+            centerPoint: centerPointData,
+            color: savedGroup.color,
+            groupNumber: savedGroup.group_number,
+            routingControls: [],
+            // PHỤC HỒI POLYLINE CACHE
+            polylineCache: savedGroup.polyline_cache || {}, 
+            points: [] // Khởi tạo mảng điểm
         };
         
-        // ... (Toàn bộ code gắn sự kiện 'newMarker.on(...)' giữ nguyên) ...
-        if (isNHNN) {
-            newMarker.on('click', (e) => {
-                L.DomEvent.stopPropagation(e); 
-                handleMarkerClick(newPointData); 
-            });
-        } else {
-            newMarker.on('mouseover', (e) => {
-                highlightRankItem(newPointData.id);
-                if (newPointData.groupId === null && !isBatteryView) {
-                    const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn); 
-                    let coveredPoints = [];
-                    for (const pointToTest of ungroupedPoints) { 
-                        if (newPointData.latlng.distanceTo(pointToTest.latlng) <= RADIUS_METERS) {
-                            coveredPoints.push(pointToTest);
-                        }
-                    }
-                    const previewItem = {
-                        type: 'NEW', 
-                        centerPoint: newPointData,
-                        coveredPoints: coveredPoints,
-                        color: PREVIEW_COLOR 
-                    };
-                    showPreview(previewItem, null); 
-                }
-            });
-            newMarker.on('mouseout', () => {
-                clearRankItemHighlight(); 
-                clearPreview();
-            });
-            newMarker.on('click', (e) => {
-                L.DomEvent.stopPropagation(e); 
-                handleMarkerClick(newPointData);
-            });
-        }
-        newMarker.on('popupclose', () => {
-            currentPopup = null;
-        });
+        // **********************************************
+        // 3. Cập nhật các điểm thành viên VÀ ĐIỂM TÂM
+        const memberIds = savedGroup.member_ids;
+        const pointsInGroup = [];
         
-        allPoints.push(newPointData); 
-        return newPointData; 
+        // Đảm bảo điểm tâm là thành viên của nhóm
+        centerPointData.groupId = savedGroup.group_id; 
+        pointsInGroup.push(centerPointData);
+        
+        memberIds.forEach(memberId => {
+            if (memberId === centerPointId) return; // Bỏ qua nếu là điểm tâm (đã thêm)
+            
+            const memberPoint = getPointDataById(memberId);
+            if (memberPoint) {
+                memberPoint.groupId = savedGroup.group_id;
+                pointsInGroup.push(memberPoint);
+            }
+        });
+
+        // Gán MẢNG ĐIỂM đã hoàn chỉnh (bao gồm điểm tâm) vào nhóm
+        newGroup.points = pointsInGroup; // <--- DÒNG SỬA CHỮA
+        
+        allGroups.push(newGroup);
+
+        // 4. Đồng bộ biến 'groups' (cho UI Popup)
+        groups[`NHÓM ${savedGroup.group_number}`] = { 
+            id: savedGroup.group_id, 
+            color: savedGroup.color, 
+            pointIds: memberIds
+        };
+        
+        loadCount++;
+    });
+    
+    // 6. Vẽ lại bản đồ
+    drawAllGroups();
+    updateRankTable();
+    updateFilterOptions();
+    
+    if (loadCount > 0) {
+        showToast(`Đã tải lại ${loadCount} nhóm từ bộ nhớ thành công!`, "info");
     }
+}
+
+/**
+ * (MỚI) Xóa một nhóm đã chọn.
+ * @param {string} groupId - ID của nhóm cần xóa (ví dụ: 'G_1').
+ */
+function popup_deleteGroup(groupId) {
+    // Thêm hộp thoại xác nhận để tránh xóa nhầm
+    if (!confirm(`Bạn có chắc chắn muốn hủy Nhóm ID: ${groupId} không? Hành động này không thể hoàn tác.`)) {
+        return;
+    }
+    
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
+    }
+
+    const groupIndex = allGroups.findIndex(g => String(g.id) === String(groupId));
+    if (groupIndex === -1) {
+        showToast(`Lỗi: Không tìm thấy nhóm ID ${groupId}.`, "error");
+        return;
+    }
+
+    const groupToDelete = allGroups[groupIndex];
+    const groupNumber = groupToDelete.groupNumber;
+
+    // 1. Reset GroupID cho TẤT CẢ các điểm trong nhóm
+    // Bao gồm các điểm trong mảng points và điểm centerPoint (cần tìm lại điểm centerPoint từ allPoints)
+    
+    // Tìm lại tất cả các điểm trên bản đồ mà có groupId này
+    const pointsToReset = allPoints.filter(p => String(p.groupId) === String(groupId));
+    
+    pointsToReset.forEach(p => {
+        p.groupId = null; // Đưa về trạng thái chưa được nhóm
+    });
+
+    // 2. Xóa khỏi danh sách nhóm (allGroups)
+    allGroups.splice(groupIndex, 1);
+
+    // 3. Xóa khỏi đối tượng groups (dùng cho UI/Popup)
+    const groupKey = Object.keys(groups).find(key => groups[key].id === groupId);
+    if (groupKey) {
+        delete groups[groupKey];
+    }
+    
+    // 4. CẬP NHẬT TRẠNG THÁI: Vẽ lại bản đồ và UI
+    drawAllGroups();
+    updateRankTable();
+    updateFilterOptions();
+
+    // 5. LƯU VÀO LOCAL STORAGE
+    exportGroupsData();
+
+    showToast(`Đã hủy thành công Nhóm ${groupNumber} và đưa ${pointsToReset.length} điểm về trạng thái chưa nhóm.`, "success");
+}
+/**
+ * (SỬA ĐỔI v52: Thêm tham số tenHubStr và thuộc tính tenHub)
+ */
+function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr, hubYesStr, tenHubStr) { 
+    // (SỬA v44.1) Logic check 'isNHNN' này mạnh hơn
+    const isNHNN = (nhnn === true || String(nhnn).toLowerCase() === 'true' || String(nhnn) === '1');
+    
+    const cleanChinhanh = chinhanh ? String(chinhanh).trim() : 'Không có';
+    const cleanVung = vung ? String(vung).trim() : 'Không xác định';
+    const cleanTonQuy = parseFloat(String(tonQuyStr).replace(/[\s,]/g, '')) || 0;
+    const cleanHanMuc = parseFloat(String(hanMucStr).replace(/[\s,]/g, '')) || 0;
+    const isVuotHanMuc = String(vuotHanMucStr).trim() !== '-' && String(vuotHanMucStr).trim() !== '';
+
+    const isHubPoint = String(hubYesStr).trim().toUpperCase() === 'YES';
+    
+    // (*** MỚI - Lấy tên HUB ***)
+    const cleanTenHub = tenHubStr ? String(tenHubStr).trim() : null;
+
+    
+    // (*** SỬA v44 ***) Logic tạo marker
+    const newMarker = L.marker(latlng, { 
+        icon: isNHNN ? createNHNNIcon() : createPGDIcon() 
+    });
+
+    // (*** MỚI v44 ***)
+    if (isNHNN) {
+        newMarker.addTo(nhnnMarkersLayer); 
+    }
+    
+    const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
+// === LƯU MARKER VÀO BIẾN TOÀN CỤC ===
+    allMarkers[pointId] = newMarker; 
+    // ====================================
+    const newPointData = {
+        id: pointId, 
+        latlng: latlng,
+        marker: newMarker,
+        groupId: isNHNN ? 'REFERENCE' : null, 
+        chinhanh: cleanChinhanh, 
+        vung: cleanVung, 
+        isVisible: true,
+        nhnn: isNHNN, 
+        tonQuy: cleanTonQuy,
+        hanMuc: cleanHanMuc,
+        vuotHanMuc: isVuotHanMuc,
+        isHub: isHubPoint, 
+        tenHub: cleanTenHub // <--- THÊM THUỘC TÍNH TENHUB
+    };
+    
+    // ... (Code gắn sự kiện giữ nguyên) ...
+
+    if (isNHNN) {
+        newMarker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e); 
+            handleMarkerClick(newPointData); 
+        });
+    } else {
+        newMarker.on('mouseover', (e) => {
+            highlightRankItem(newPointData.id);
+            if (newPointData.groupId === null && !isBatteryView && newPointData.isHub) {
+                const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn); 
+                let coveredPoints = [];
+                for (const pointToTest of ungroupedPoints) { 
+                    if (newPointData.latlng.distanceTo(pointToTest.latlng) <= RADIUS_METERS) {
+                        coveredPoints.push(pointToTest);
+                    }
+                }
+                const previewItem = {
+                    type: 'NEW', 
+                    centerPoint: newPointData,
+                    coveredPoints: coveredPoints,
+                    color: PREVIEW_COLOR 
+                };
+                showPreview(previewItem, null); 
+            }
+        });
+        newMarker.on('mouseout', () => {
+            clearRankItemHighlight(); 
+            clearPreview();
+        });
+        newMarker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e); 
+            handleMarkerClick(newPointData);
+        });
+    }
+    newMarker.on('popupclose', () => {
+        currentPopup = null;
+    });
+    
+    allPoints.push(newPointData); 
+    return newPointData; 
+}
     
     /**
      * (*** MỚI v45 ***) Hàm Bật/Tắt hiển thị lớp NHNN
@@ -1304,78 +1990,93 @@
         // 3. (QUAN TRỌNG) Gọi lại hàm applyFilter
         applyFilter();
     }
-    
-    /**
-     * (SỬA ĐỔI v42: Thêm updateMarkersVisibility() để hiển thị marker lần đầu)
-     */
-    function loadPreloadedData() {
-        const powerAutomateUrl = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7a3ba54b6604025882ae481816180bb/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=R88_MePGo47lYzv0ndIiVxbRUcMncU26zdMq9HGw9hs'; 
+/**
+ * (SỬA ĐỔI v52: Thêm tham số item.TENHUB)
+ */
+function loadPreloadedData() {
+    const powerAutomateUrl = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7a3ba54b6604025882ae481816180bb/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=R88_MePGo47lYzv0ndIiVxbRUcMncU26zdMq9HGw9hs'; 
 
-        showToast("Đang tải dữ liệu từ Power Automate...", 'info');
+    showToast("Đang tải dữ liệu từ Power Automate...", 'info');
 
-        fetch(powerAutomateUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}) 
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
+    fetch(powerAutomateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}) 
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
+        }
+        return response.json(); 
+    })
+    .then(data => {
+        let bounds = L.latLngBounds();
+        
+        if (!Array.isArray(data)) {
+            throw new Error("Dữ liệu nhận được không phải là một mảng (array)!");
+        }
+
+        data.forEach(item => {
+            const lat = parseFloat(String(item.LATITUDE).trim());
+            const lng = parseFloat(String(item.LONGITUDE).replace('S', '').trim());
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const latlng = L.latLng(lat, lng);
+
+                addPointToMap(
+                    latlng, 
+                    item.TERMID, 
+                    item.CHINHANH, 
+                    item.NHNN, 
+                    item.VUNG,
+                    item.Ton_quy_cuoi_ngay,
+                    item.VUOT_HAN_MUC,
+                    item.HMTQ_ngay,
+                    item.HUBYES,
+                    item.TENHUB // <--- THÊM THAM SỐ TENHUB
+                ); 
+                bounds.extend(latlng);
+            } else {
+                console.warn("Bỏ qua điểm có tọa độ không hợp lệ:", item.TERMID);
             }
-            return response.json(); 
-        })
-        .then(data => {
-            let bounds = L.latLngBounds();
-            
-            if (!Array.isArray(data)) {
-                 throw new Error("Dữ liệu nhận được không phải là một mảng (array)!");
-            }
-
-            data.forEach(item => {
-                const lat = parseFloat(String(item.LATITUDE).trim());
-                const lng = parseFloat(String(item.LONGITUDE).replace('S', '').trim());
-
-                if (!isNaN(lat) && !isNaN(lng)) {
-                    const latlng = L.latLng(lat, lng);
-
-                    addPointToMap(
-                        latlng, 
-                        item.TERMID, 
-                        item.CHINHANH, 
-                        item.NHNN, 
-                        item.VUNG,
-                        item.Ton_quy_cuoi_ngay,
-                        item.VUOT_HAN_MUC,
-                        item.HMTQ_ngay
-                    ); 
-                    bounds.extend(latlng);
-                } else {
-                    console.warn("Bỏ qua điểm có tọa độ không hợp lệ:", item.TERMID);
-                }
-            });
-            
-            buildCascadingFiltersUI(); 
-
-            showToast(`Đã tải ${data.length} điểm dữ liệu.`, 'success');
-            
-            updateRankTable(); 
-
-            // (*** MỚI v42 ***)
-            updateMarkersVisibility();
-            
-            if (bounds.isValid()) {
-                map.fitBounds(bounds.pad(0.1));
-            }
-        })
-        .catch(error => {
-            console.error('Lỗi khi tải dữ liệu từ Power Automate:', error);
-            showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
-            updateRankTable();
-            updateMarkersVisibility(); 
         });
+        
+        buildCascadingFiltersUI(); 
+
+        showToast(`Đã tải ${data.length} điểm dữ liệu.`, 'success');
+        
+        updateRankTable(); 
+
+        updateMarkersVisibility();
+        // === BỔ SUNG: TẢI LẠI DỮ LIỆU NHÓM ĐÃ LƯU ===
+        loadGroupsFromLocalStorage(); 
+        // =============================================
+        if (bounds.isValid()) {
+            map.fitBounds(bounds.pad(0.1));
+        }
+    })
+    .catch(error => {
+        console.error('Lỗi khi tải dữ liệu từ Power Automate:', error);
+        showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
+        updateRankTable();
+        updateMarkersVisibility(); 
+    });
+}
+/**
+ * (MỚI) Đọc dữ liệu từ Local Storage và gọi phục hồi.
+ */
+function loadGroupsFromLocalStorage() {
+    try {
+        const savedJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedJson) {
+            const savedData = JSON.parse(savedJson);
+            loadSavedGroups(savedData);
+        }
+    } catch (e) {
+        console.error("Lỗi khi đọc Local Storage:", e);
+        showToast("Lỗi khi tải lại trạng thái nhóm từ bộ nhớ.", "error");
     }
-
-
+}
     // --- (MỚI v35) CỤM LOGIC LỌC GIA ĐÌNH ---
     
     /**
@@ -1693,307 +2394,336 @@
     // --- HẾT CỤM LOGIC LỌC v35 ---
 
 
-    /**
-     * (SỬA ĐỔI v48: Ẩn/Hiện nút 🏆 thay vì ẩn/hiện panel)
-     */
-    function updateRankTable() {
-        const rankTableContainer = document.getElementById('rank-table-container');
-        const rankToggleButton = document.getElementById('rank-toggle-btn'); // ID mới
-        
-        if (!rankToggleButton) return; // (An toàn) Nếu nút chưa kịp tạo
+/**
+ * (SỬA ĐỔI v48: Ẩn/Hiện nút 🏆 thay vì ẩn/hiện panel)
+ * (*** SỬA v51: Chỉ hiển thị điểm isHub=true trong xếp hạng NEW ***)
+ */
+function updateRankTable() {
+    const rankTableContainer = document.getElementById('rank-table-container');
+    const rankToggleButton = document.getElementById('rank-toggle-btn'); // ID mới
+    
+    if (!rankToggleButton) return; 
 
-        // (MỚI v39) Không hiển thị bảng xếp hạng khi ở chế độ Pin
-        if (isBatteryView) {
-            rankTableContainer.style.display = 'none'; // Vẫn ẩn panel
-            rankToggleButton.style.display = 'none'; // Ẩn luôn nút
-            currentRankings = [];
-            return; 
-        }
-
-        // ungroupedPoints chỉ lấy các điểm 'null' (tự động loại NHNN)
-        const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible);
-
-        // (SỬA v48) Logic mới: Ẩn/Hiện NÚT BẤM
-        if (ungroupedPoints.length === 0 && allGroups.length === 0) {
-            rankToggleButton.style.display = 'none'; // Ẩn nút
-            rankTableContainer.style.display = 'none'; // Tắt panel (phòng hờ)
-            currentRankings = [];
-            return;
-        }
-        
-        // (SỬA v48) Hiển thị nút bấm (dạng flex)
-        rankToggleButton.style.display = 'flex'; 
-        
-        // *** ĐÃ XÓA: rankTableContainer.style.display = 'block'; ***
-        
-        currentRankings = []; 
-        
-        // ---- BƯỚC 2: Xếp hạng "TẠO NHÓM MỚI" ----
-        for (const centerCandidate of ungroupedPoints) { 
-            let coveredPoints = [];
-            let totalDistanceScore = 0; 
-
-            for (const pointToTest of ungroupedPoints) { 
-                const distance = centerCandidate.latlng.distanceTo(pointToTest.latlng);
-                if (distance <= RADIUS_METERS) {
-                    coveredPoints.push(pointToTest);
-                    totalDistanceScore += (distance * distance); 
-                }
-            }
-            
-            if (coveredPoints.length > 0) {
-                currentRankings.push({
-                    type: 'NEW', 
-                    centerId: centerCandidate.id,
-                    centerPoint: centerCandidate, 
-                    coveredPoints: coveredPoints,
-                    score: coveredPoints.length,
-                    distanceScore: totalDistanceScore,
-                    color: PREVIEW_COLOR 
-                });
-            }
-        }
-
-        // ---- BƯỚC 3: Xếp hạng "DI CHUYỂN NHÓM" ----
-        const centerPointIds = new Set(allGroups.map(g => g.centerPoint.id));
-        const movablePoints = allPoints.filter(p => p.groupId !== null && p.groupId !== 'REFERENCE' && !centerPointIds.has(p.id) && p.isVisible);
-
-        for (const pointToMove of movablePoints) { 
-            for (const targetGroup of allGroups) {
-                
-                if (!targetGroup.centerPoint.isVisible) continue; 
-            
-                if (pointToMove.groupId !== targetGroup.id) {
-                    const distance = pointToMove.latlng.distanceTo(targetGroup.centerPoint.latlng);
-                    if (distance <= RADIUS_METERS) {
-                        currentRankings.push({
-                            type: 'MOVE',
-                            pointToMove: pointToMove,
-                            targetGroup: targetGroup,
-                            score: 0, 
-                            distanceScore: distance,
-                            color: targetGroup.color
-                        });
-                    }
-                }
-            }
-        }
-        
-        currentRankings.sort((a, b) => {
-            if (a.score !== b.score) {
-                return b.score - a.score; 
-            }
-            return a.distanceScore - b.distanceScore; 
-        });
-
-        renderRankTable();
+    // (MỚI v39) Không hiển thị bảng xếp hạng khi ở chế độ Pin
+    if (isBatteryView) {
+        rankTableContainer.style.display = 'none'; 
+        rankToggleButton.style.display = 'none'; 
+        currentRankings = [];
+        return; 
     }
 
-    /**
-     * (HÀM UI v22) Vẽ Bảng Xếp Hạng
-     */
-    function renderRankTable() {
-        const rankTableBody = document.getElementById('rank-table-body');
-        rankTableBody.innerHTML = ''; 
+    // (*** SỬA LỚN NHẤT ***)
+    // 1. Lọc ra các điểm HUB CHƯA NHÓM VÀ HIỂN THỊ (Ứng viên TÂM NHÓM MỚI)
+    const ungroupedHubPoints = allPoints.filter(p => p.groupId === null && p.isVisible && p.isHub);
+    
+    // 2. Lọc ra TẤT CẢ các điểm chưa nhóm VÀ HIỂN THỊ (Ứng viên THÀNH VIÊN)
+    const allUngroupedAndVisible = allPoints.filter(p => p.groupId === null && p.isVisible);
 
-        const newActions = currentRankings.filter(r => r.type === 'NEW');
-        const moveActions = currentRankings.filter(r => r.type === 'MOVE');
+    // (SỬA v48) Logic mới: Ẩn/Hiện NÚT BẤM
+    if (ungroupedHubPoints.length === 0 && allGroups.length === 0) {
+        rankToggleButton.style.display = 'none'; // Ẩn nút
+        rankTableContainer.style.display = 'none'; // Tắt panel (phòng hờ)
+        currentRankings = [];
+        return;
+    }
+    
+    // (SỬA v48) Hiển thị nút bấm (dạng flex)
+    rankToggleButton.style.display = 'flex'; 
+    
+    currentRankings = []; 
+    
+    // ---- BƯỚC 2: Xếp hạng "TẠO NHÓM MỚI" (CHỈ DÙNG ĐIỂM HUB) ----
+    for (const centerCandidate of ungroupedHubPoints) { // <--- SỬ DỤNG HUB POINTS
+        let coveredPoints = [];
+        let totalDistanceScore = 0; 
 
-        // 1. Render NEW (Tạo Mới)
-        newActions.forEach((item, index) => {
-            const row = document.createElement('div');
-            row.className = 'rank-item rank-item-new';
-            row.dataset.pointId = item.centerId; 
-            row.innerHTML = `
-                <b>(Tạo mới) Hạng ${index + 1}</b>
-                <div>Tâm: (ID: ${item.centerId})</div>
-                <div>Cover: <b>${item.score}</b> điểm mới</div>
-                <button data-center-id="${item.centerId}">
-                    <i class="fa-solid fa-plus"></i> Tạo Nhóm Mới
+        // Lặp qua TẤT CẢ các điểm chưa nhóm & hiển thị
+        for (const pointToTest of allUngroupedAndVisible) { 
+            const distance = centerCandidate.latlng.distanceTo(pointToTest.latlng);
+            if (distance <= RADIUS_METERS) {
+                coveredPoints.push(pointToTest);
+                totalDistanceScore += (distance * distance); 
+            }
+        }
+        
+        if (coveredPoints.length > 0) {
+            currentRankings.push({
+                type: 'NEW', 
+                centerId: centerCandidate.id,
+                centerPoint: centerCandidate, 
+                coveredPoints: coveredPoints,
+                score: coveredPoints.length,
+                distanceScore: totalDistanceScore,
+                color: PREVIEW_COLOR 
+            });
+        }
+    }
+
+    // ---- BƯỚC 3: Xếp hạng "DI CHUYỂN NHÓM" (Giữ nguyên) ----
+    const centerPointIds = new Set(allGroups.map(g => g.centerPoint.id));
+    const movablePoints = allPoints.filter(p => p.groupId !== null && p.groupId !== 'REFERENCE' && !centerPointIds.has(p.id) && p.isVisible);
+
+    for (const pointToMove of movablePoints) { 
+        for (const targetGroup of allGroups) {
+            
+            if (!targetGroup.centerPoint.isVisible) continue; 
+            
+            if (pointToMove.groupId !== targetGroup.id) {
+                const distance = pointToMove.latlng.distanceTo(targetGroup.centerPoint.latlng);
+                if (distance <= RADIUS_METERS) {
+                    currentRankings.push({
+                        type: 'MOVE',
+                        pointToMove: pointToMove,
+                        targetGroup: targetGroup,
+                        score: 0, 
+                        distanceScore: distance,
+                        color: targetGroup.color
+                    });
+                }
+            }
+        }
+    }
+    
+    currentRankings.sort((a, b) => {
+        if (a.score !== b.score) {
+            return b.score - a.score; 
+        }
+        return a.distanceScore - b.distanceScore; 
+    });
+
+    renderRankTable();
+}
+
+/**
+ * (SỬA ĐỔI v51 & v52) Vẽ Bảng Xếp Hạng - Thêm logic click focus vào điểm tương ứng
+ */
+function renderRankTable() {
+    const rankTableBody = document.getElementById('rank-table-body');
+    rankTableBody.innerHTML = ''; 
+
+    const newActions = currentRankings.filter(r => r.type === 'NEW');
+    const moveActions = currentRankings.filter(r => r.type === 'MOVE');
+
+    // 1. Render NEW (Tạo Mới)
+    newActions.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'rank-item rank-item-new';
+        row.dataset.pointId = item.centerId; 
+        
+        const hubNameHtml = item.centerPoint.tenHub ? 
+                            `<div><b>HUB:</b> ${item.centerPoint.tenHub}</div>` : 
+                            '';
+        
+        // Gắn sự kiện Click của Row để Focus/Zoom trên bản đồ
+        row.addEventListener('click', (e) => {
+            // Chỉ focus nếu không click vào nút button
+            if (e.target.tagName !== 'BUTTON' && e.target.closest('button') === null) {
+                focusOnPoint(item.centerId);
+            }
+        });
+        
+        row.innerHTML = `
+            <b>(Tạo mới) Hạng ${index + 1}</b>
+            ${hubNameHtml}
+            <div>Tâm ID: ${item.centerId}</div>
+            <div>Cover: <b>${item.score}</b> điểm mới</div>
+            <button data-center-id="${item.centerId}">
+                <i class="fa-solid fa-plus"></i> Tạo Nhóm Mới
+            </button>
+        `;
+        
+        row.addEventListener('mouseenter', (e) => showPreview(item, e.currentTarget));
+        row.addEventListener('mouseleave', () => clearPreview());
+        row.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            popup_createGroup(item.centerId); 
+        });
+        rankTableBody.appendChild(row);
+    });
+
+    // 2. Render MOVE (Di chuyển)
+    const groupedMoveActions = new Map();
+    moveActions.forEach(item => {
+        if (!groupedMoveActions.has(item.pointToMove.id)) {
+            groupedMoveActions.set(item.pointToMove.id, []);
+        }
+        groupedMoveActions.get(item.pointToMove.id).push(item);
+    });
+
+    groupedMoveActions.forEach((actions, pointId) => {
+        const pointToMove = actions[0].pointToMove;
+        const currentGroup = allGroups.find(g => g.id === pointToMove.groupId);
+        
+        const row = document.createElement('div');
+        row.className = 'rank-item rank-item-move';
+        row.dataset.pointId = pointId; 
+
+        // Gắn sự kiện Click của Row để Focus/Zoom trên bản đồ
+        row.addEventListener('click', (e) => {
+            // Chỉ focus nếu không click vào nút button
+            if (e.target.tagName !== 'BUTTON' && e.target.closest('button') === null) {
+                focusOnPoint(pointId);
+            }
+        });
+
+        let buttonsHTML = '';
+        actions.forEach(item => {
+            buttonsHTML += `
+                <button data-point-id="${item.pointToMove.id}" data-group-id="${item.targetGroup.id}">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển G${item.targetGroup.groupNumber}
                 </button>
             `;
-            
-            row.addEventListener('mouseenter', (e) => showPreview(item, e.currentTarget));
-            row.addEventListener('mouseleave', () => clearPreview());
-            row.querySelector('button').addEventListener('click', (e) => {
+        });
+
+        row.innerHTML = `
+            <b>(Di chuyển) Điểm ID: ${pointId}</b>
+            <div>Từ: Nhóm ${currentGroup.groupNumber} (Tâm ID: ${currentGroup.centerPoint.id})</div>
+            <div class="button-group">
+                ${buttonsHTML}
+            </div>
+        `;
+
+        row.addEventListener('mouseenter', (e) => {
+            showPreview(actions[0], e.currentTarget);
+        });
+        row.addEventListener('mouseleave', () => {
+            clearPreview();
+        });
+
+        row.querySelectorAll('button').forEach((button, index) => {
+            button.addEventListener('click', (e) => {
                 e.stopPropagation();
-                popup_createGroup(item.centerId); 
+                const pointId = e.currentTarget.dataset.pointId; 
+                const groupId = parseInt(e.currentTarget.dataset.groupId);
+                movePoint(pointId, groupId); 
             });
-            rankTableBody.appendChild(row);
         });
 
-        // 3. Render MOVE (Di chuyển)
-        const groupedMoveActions = new Map();
-        moveActions.forEach(item => {
-            if (!groupedMoveActions.has(item.pointToMove.id)) {
-                groupedMoveActions.set(item.pointToMove.id, []);
+        rankTableBody.appendChild(row);
+    });
+}
+/**
+ * (MỚI v51) Hàm tập trung (Focus) vào một điểm trên bản đồ.
+ */
+function focusOnPoint(pointId) {
+    const point = allPoints.find(p => String(p.id) === String(pointId));
+    
+    if (!point || !point.marker) {
+        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId} trên bản đồ.`, "error");
+        return;
+    }
+    
+    // (Kiểm tra điểm có bị ẩn bởi filter không)
+    if (!point.isVisible) {
+        showToast(`Điểm ID ${pointId} đang bị ẩn bởi bộ lọc hiện tại.`, "warning");
+    }
+
+    // 1. Zoom đến điểm (Sử dụng flyTo cho hiệu ứng mượt mà)
+    const currentZoom = map.getZoom();
+    map.flyTo(point.latlng, Math.max(currentZoom, 17)); // Zoom tối thiểu 17
+
+    // 2. Mở popup (nếu có)
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
+    }
+
+    // (MỚI) Kích hoạt sự kiện click của marker (như click bằng tay)
+    // Điều này sẽ mở lại popup hành động/pin nếu điểm đó chưa bị gom cụm
+    if (point.marker) {
+        point.marker.fire('click');
+    }
+    
+    // 3. (Nếu đang dùng gom cụm) Đảm bảo điểm hiển thị
+    if (isClusteringEnabled && pointMarkersLayer.hasLayer(clusterLayer)) {
+        pointMarkersLayer.zoomToShowLayer(point.marker, () => {
+            // Sau khi zoom xong, kích hoạt click lần nữa để đảm bảo popup hiện
+            if (point.marker) {
+                point.marker.fire('click');
             }
-            groupedMoveActions.get(item.pointToMove.id).push(item);
-        });
-
-        groupedMoveActions.forEach((actions, pointId) => {
-            const pointToMove = actions[0].pointToMove;
-            const currentGroup = allGroups.find(g => g.id === pointToMove.groupId);
-            
-            const row = document.createElement('div');
-            row.className = 'rank-item rank-item-move';
-            row.dataset.pointId = pointId; 
-
-            let buttonsHTML = '';
-            actions.forEach(item => {
-                buttonsHTML += `
-                    <button data-point-id="${item.pointToMove.id}" data-group-id="${item.targetGroup.id}">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển G${item.targetGroup.groupNumber}
-                    </button>
-                `;
-            });
-
-            row.innerHTML = `
-                <b>(Di chuyển) Điểm ID: ${pointId}</b>
-                <div>Từ: Nhóm ${currentGroup.groupNumber} (Tâm ID: ${currentGroup.centerPoint.id})</div>
-                <div class="button-group">
-                    ${buttonsHTML}
-                </div>
-            `;
-
-            row.addEventListener('mouseenter', (e) => {
-                showPreview(actions[0], e.currentTarget);
-            });
-            row.addEventListener('mouseleave', () => {
-                clearPreview();
-            });
-
-            row.querySelectorAll('button').forEach((button, index) => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const pointId = e.currentTarget.dataset.pointId; 
-                    const groupId = parseInt(e.currentTarget.dataset.groupId);
-                    movePoint(pointId, groupId); 
-                });
-            });
-
-            rankTableBody.appendChild(row);
         });
     }
 
-    /**
-     * (SỬA ĐỔI v40: Sửa lỗi zoom)
-     */
-    function handleMarkerClick(pointData) {
-        if (currentPopup) {
-            map.closePopup(currentPopup);
-            currentPopup = null;
-        }
-
-        let shouldZoom = false; // (MỚI v40) Thêm cờ điều khiển zoom
-
-        if (pointData.nhnn) { 
-            let html = `<div class="action-popup-header">Điểm Tham Chiếu</div>
-                            <div class="action-popup-buttons">
-                                <div class="action-popup-info" style="text-align: center; padding: 10px 0;">
-                                    <img src="${pointData.marker.options.icon.options.iconUrl}" style="width: 30px; height: 30px; margin: 0 auto 5px auto;"><br>
-                                    <b>${pointData.id}</b><br>(Ngân hàng Nhà nước)
-                                </div>
-                            </div>`;
-            
-            currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
-                .setLatLng(pointData.latlng)
-                .setContent(html)
-                .openOn(map);
-            
-            shouldZoom = true; // (SỬA v40) Zoom khi xem NHNN
-        
-        } else if (isBatteryView) {
-            // (MỚI v39) Hiển thị popup chi tiết tiền
-            let html = `<div class="action-popup-header">${pointData.id}</div>
-                            <div class="action-popup-info battery-info-popup">
-                                <b>Tồn quỹ:</b> ${formatFullNumber(pointData.tonQuy)}<br>
-                                <b>Hạn mức:</b> ${formatFullNumber(pointData.hanMuc)}<br>
-                                <b>Trạng thái:</b> ${pointData.vuotHanMuc ? 
-                                    '<span style="color: red; font-weight: bold;">Vượt Hạn Mức</span>' : 
-                                    'Trong Hạn Mức'}
-                            </div>`;
-            
-            currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
-                .setLatLng(pointData.latlng)
-                .setContent(html)
-                .openOn(map);
-            
-            shouldZoom = true; // (SỬA v40) Zoom khi xem Pin
-        
-        } else {
-            // Code bên dưới chỉ chạy cho các điểm PGD & KHÔNG ở chế độ Pin
-            const centerPointIds = new Set(allGroups.map(g => g.centerPoint.id));
-            let html = `<div class="action-popup-header">Điểm ID: ${pointData.id}</div><div class="action-popup-buttons">`;
-            let hasAction = false;
-
-            if (pointData.groupId === null) {
-                // *** (SỬA v40) KHÔNG ZOOM KHI ĐIỂM CHƯA CÓ NHÓM ***
-                shouldZoom = false; 
-
-                // 1. Tìm các lựa chọn "ADD"
-                allGroups.forEach(group => {
-                    if (group.centerPoint.isVisible) {
-                        const distance = pointData.latlng.distanceTo(group.centerPoint.latlng);
-                        if (distance <= RADIUS_METERS) {
-                            html += `<button class="btn-add" onclick="popup_addPointToGroup('${pointData.id}', ${group.id})">
-                                        <i class="fa-solid fa-check"></i> Thêm vào Nhóm ${group.groupNumber}
-                                     </button>`;
-                            hasAction = true;
-                        }
-                    }
-                });
-
-                // 2. Lựa chọn "NEW"
-                html += `<button class="btn-new" onclick="popup_createGroup('${pointData.id}')">
-                            <i class="fa-solid fa-plus"></i> Tạo Nhóm Mới (làm tâm)
-                         </button>`;
-                hasAction = true;
-
-            } else {
-                // *** (SỬA v40) ZOOM KHI ĐIỂM ĐÃ CÓ NHÓM (để di chuyển/xem) ***
-                shouldZoom = true; 
-
-                if (centerPointIds.has(pointData.id)) {
-                    // 1. Đây là TÂM
-                    const group = allGroups.find(g => g.centerPoint.id === pointData.id);
-                    html += `<div class="action-popup-info"><b>Đây là Tâm của Nhóm ${group.groupNumber}</b><br>(Không thể di chuyển)</div>`;
-                } else {
-                    // 2. Đây là THÀNH VIÊN (có thể di chuyển)
-                    allGroups.forEach(group => {
-                        if (group.centerPoint.isVisible) {
-                            if (pointData.groupId !== group.id) {
-                                const distance = pointData.latlng.distanceTo(group.centerPoint.latlng);
-                                if (distance <= RADIUS_METERS) {
-                                     html += `<button class="btn-move" onclick="movePoint('${pointData.id}', ${group.id})">
-                                                <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển sang Nhóm ${group.groupNumber}
-                                              </button>`;
-                                     hasAction = true;
-                                }
-                            }
-                        }
-                    });
-                    
-                    if (!hasAction) {
-                         html += `<div class="action-popup-info">Không có nhóm nào khác trong phạm vi 30km.</div>`;
-                    }
-                }
-            }
-
-            html += `</div>`;
-            
-            currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
-                .setLatLng(pointData.latlng)
-                .setContent(html)
-                .openOn(map);
-        }
-        
-        // (SỬA v40) Chỉ zoom khi cờ shouldZoom = true
-        if (shouldZoom) {
-            const currentZoom = map.getZoom();
-            map.flyTo(pointData.latlng, Math.max(currentZoom, 16));
-        }
+    showToast(`Đã tập trung vào Điểm ID: ${pointId}`, 'info');
+}
+/**
+ * (SỬA LỖI HOÀN CHỈNH) Hàm xử lý sự kiện click trên Marker.
+ * Quyết định hiển thị Popup Pin, Popup Tham Chiếu, hoặc Popup Hành Động (Action Popup).
+ */
+function handleMarkerClick(pointData) {
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
     }
+
+    let shouldZoom = false; 
+
+    if (pointData.nhnn) {
+        // === XỬ LÝ ĐIỂM NHNN ===
+        let html = `<div class="action-popup-header">Điểm Tham Chiếu</div>
+                                <div class="action-popup-buttons">
+                                    <div class="action-popup-info" style="text-align: center; padding: 10px 0;">
+                                        <img src="${pointData.marker.options.icon.options.iconUrl}" style="width: 30px; height: 30px; margin: 0 auto 5px auto;"><br>
+                                        <b>${pointData.id}</b><br>(Ngân hàng Nhà nước)
+                                    </div>
+                                </div>`;
+            
+        currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
+            .setLatLng(pointData.latlng)
+            .setContent(html)
+            .openOn(map);
+            
+        shouldZoom = true; 
+        
+    } else if (isBatteryView) {
+        // === XỬ LÝ CHẾ ĐỘ PIN/TỒN QUỸ ===
+        let html = `<div class="action-popup-header">${pointData.id}</div>
+                                <div class="action-popup-info battery-info-popup">
+                                    <b>Tồn quỹ:</b> ${formatFullNumber(pointData.tonQuy)}<br>
+                                    <b>Hạn mức:</b> ${formatFullNumber(pointData.hanMuc)}<br>
+                                    <b>Trạng thái:</b> ${pointData.vuotHanMuc ? 
+                                        '<span style="color: red; font-weight: bold;">Vượt Hạn Mức</span>' : 
+                                        'Trong Hạn Mức'}
+                                </div>`;
+            
+        currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
+            .setLatLng(pointData.latlng)
+            .setContent(html)
+            .openOn(map);
+            
+        shouldZoom = true; 
+        
+    } else {
+        // === XỬ LÝ POPUP HÀNH ĐỘNG (THÊM/HỦY NHÓM) ===
+        
+        // 1. Tìm nhóm hiện tại của điểm 
+        let currentGroupId = null;
+        for (const name in groups) {
+            if (groups[name].pointIds.includes(pointData.id)) {
+                currentGroupId = groups[name].id;
+                break;
+            }
+        }
+
+        // 2. Tạo nội dung Popup HÀNH ĐỘNG (gồm nút Hủy/Chuyển nhóm)
+        const content = createActionPopupContent(pointData.id, currentGroupId);
+        
+        // 3. Gán Popup MỚI
+        currentPopup = L.popup({ closeButton: true, minWidth: 220, className: 'action-popup' })
+            .setLatLng(pointData.latlng)
+            .setContent(content)
+            .openOn(map);
+
+        // 4. Logic Zoom: Chỉ zoom khi điểm đã có nhóm (hoặc bạn có thể chọn luôn zoom)
+        shouldZoom = (currentGroupId !== null); 
+    }
+    
+    // Chỉ zoom khi cờ shouldZoom = true
+    if (shouldZoom) {
+        const currentZoom = map.getZoom();
+        map.flyTo(pointData.latlng, Math.max(currentZoom, 16));
+    }
+}
 
     /**
      * (SỬA ĐỔI v43: Thêm kiểm tra an toàn cho gom cụm VÀ nhãn km)
@@ -2183,53 +2913,93 @@
         });
     }
 
-    /**
-     * (SỬA ĐỔI v40: Cập nhật filter nhóm)
-     */
-    function popup_createGroup(centerId) {
-        const centerPoint = allPoints.find(p => String(p.id) === String(centerId));
-        if (!centerPoint || centerPoint.groupId !== null) {
-            showToast("Điểm này đã thuộc nhóm khác!", "error");
-            return;
-        }
-
-        const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible);
-        let coveredPoints = [];
-        for (const pointToTest of ungroupedPoints) { 
-            const distance = centerPoint.latlng.distanceTo(pointToTest.latlng);
-            if (distance <= RADIUS_METERS) {
-                coveredPoints.push(pointToTest);
-            }
-        }
-        
-        const newGroupNumber = allGroups.length + 1;
-        // (SỬA v40) Mở rộng bảng màu
-        const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
-
-        const newGroup = {
-            id: newGroupNumber,
-            centerPoint: centerPoint,
-            points: coveredPoints,
-            color: newGroupColor,
-            groupNumber: newGroupNumber,
-            routingControls: [] 
-        };
-        allGroups.push(newGroup);
-
-        const coveredIds = new Set(coveredPoints.map(p => p.id));
-        allPoints.forEach(p => {
-            if (coveredIds.has(p.id)) {
-                p.groupId = newGroupNumber;
-            }
-        });
-
-        if (currentPopup) map.closePopup(); 
-        updateRankTable();
-        drawAllGroups(); // (SỬA v40) Sửa lỗi: hàm này sẽ vẽ vòng tròn cố định
-        updateFilterOptions(); // (MỚI v40) Cập nhật lại dropdown "Lọc theo Nhóm"
-        showToast(`Đã tạo Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm!`, 'success');
+/**
+ * (FIX: Đảm bảo khởi tạo polylineCache khi tạo nhóm)
+ */
+function popup_createGroup(pointId) {
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
     }
+    const centerPoint = allPoints.find(p => String(p.id) === String(pointId));
+
+    if (!centerPoint) {
+        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
+        return;
+    }
+
+    // Tìm các điểm CHƯA NHÓM nằm trong bán kính 30km
+    const coveredPoints = allPoints.filter(p => {
+        if (p.id === centerPoint.id || p.nhnn) return false;
+        
+        if (p.groupId !== null && p.groupId !== 'REFERENCE') return false; 
+        
+        const distance = centerPoint.latlng.distanceTo(p.latlng);
+        return distance <= RADIUS_METERS;
+    });
+
+    const newGroupNumber = allGroups.length + 1;
+    const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
+
+    const newGroupId = `G_${newGroupNumber}`; 
     
+    // Tạo mảng điểm, BẮT ĐẦU VỚI ĐIỂM TÂM
+    const pointsInGroup = [centerPoint, ...coveredPoints];
+
+    const newGroup = {
+        id: newGroupId, 
+        centerPoint: centerPoint,
+        points: pointsInGroup, // <--- THÊM ĐIỂM TÂM VÀO MẢNG NÀY
+        color: newGroupColor,
+        groupNumber: newGroupNumber,
+        routingControls: [],
+        polylineCache: {} 
+    };
+    allGroups.push(newGroup);
+
+    // CẬP NHẬT DỮ LIỆU ĐIỂM TRƯỚC KHI VẼ
+    centerPoint.groupId = newGroupId; 
+    
+    const coveredIds = new Set(coveredPoints.map(p => p.id));
+    allPoints.forEach(p => {
+        if (coveredIds.has(p.id)) {
+            p.groupId = newGroupId; 
+        }
+    });
+
+    // ĐỒNG BỘ: Cập nhật biến groups (cho Popup Chuyển Nhóm)
+    const pointIdsInGroup = pointsInGroup.map(p => p.id); // Lấy tất cả ID (bao gồm tâm)
+
+    groups[`NHÓM ${newGroupNumber}`] = { 
+        id: newGroupId, 
+        color: newGroupColor, 
+        pointIds: pointIdsInGroup 
+    };
+    // ==========================================================
+
+    drawAllGroups(); 
+    updateRankTable();
+    updateFilterOptions();
+
+    // Fix Lỗi Zoom
+    const tempCircle = L.circle(centerPoint.latlng, { radius: RADIUS_METERS }).addTo(analysisLayer);
+    const circleBounds = tempCircle.getBounds();
+    if (circleBounds.isValid()) {
+        map.fitBounds(circleBounds.pad(0.1)); 
+    }
+    analysisLayer.removeLayer(tempCircle); // Gỡ bỏ vòng tròn tạm thời
+
+    const message = (coveredPoints.length > 0) 
+        ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
+        : "Đã tạo Nhóm mới, nhưng không có điểm nào chưa nhóm trong bán kính 30km.";
+
+    Toastify({
+        text: message,
+        className: coveredPoints.length > 0 ? "custom-toast success" : "custom-toast warning",
+    }).showToast();
+}
+
+
     function popup_addPointToGroup(pointId, targetGroupId) {
         const pointToAdd = allPoints.find(p => String(p.id) === String(pointId));
         const targetGroup = allGroups.find(g => g.id === targetGroupId);
@@ -2249,27 +3019,17 @@
         showToast(`Đã thêm Điểm ${pointId} vào Nhóm ${targetGroup.groupNumber}`, 'success');
     }
 
-    function movePoint(pointId, newGroupId) {
-        const pointToMove = allPoints.find(p => String(p.id) === String(pointId));
-        const oldGroupId = pointToMove.groupId;
-        const oldGroup = allGroups.find(g => g.id === oldGroupId);
-        const newGroup = allGroups.find(g => g.id === newGroupId);
-
-        if (!pointToMove || !oldGroup || !newGroup) {
-            showToast("Lỗi: Không tìm thấy điểm hoặc nhóm", "error");
-            return;
-        }
-
-        oldGroup.points = oldGroup.points.filter(p => String(p.id) !== String(pointId)); 
-        newGroup.points.push(pointToMove);
-        pointToMove.groupId = newGroupId;
-
-        if (currentPopup) map.closePopup();
-        updateRankTable(); 
-        drawAllGroups();
-        updateFilterOptions(); // (MỚI v40)
-        showToast(`Đã chuyển Điểm ${pointId} sang Nhóm ${newGroup.groupNumber}`, 'success');
-    }
+/**
+ * (SỬA LỖI HOÀN CHỈNH) Hàm chuyển điểm từ Bảng Xếp Hạng.
+ * Chỉ gọi hàm chính movePointToGroup để đảm bảo đồng bộ hóa dữ liệu.
+ */
+function movePoint(pointId, newGroupId) {
+    // Gọi hàm chính (đã có logic xử lý đồng bộ dữ liệu và loại trừ lẫn nhau)
+    movePointToGroup(pointId, newGroupId);
+    
+    // Lưu ý: Các hàm updateRankTable, drawAllGroups, updateFilterOptions 
+    // đã được gọi bên trong movePointToGroup.
+}
 
     /**
      * (*** SỬA ĐỔI v43 ***) 
@@ -2420,68 +3180,96 @@
         // (Toàn bộ logic xóa đã được gỡ bỏ)
     }
     
-    /**
-     * (HÀM v23) Hàm Hybrid: Vẽ chim bay, xếp hàng routing
-     * (SỬA v43) Thêm điều kiện showDistanceLabels
-     */
-    function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
-        const { color, groupNumber } = group;
-        const endMarker = pointData.marker; 
+/**
+ * (SỬA LỖI CACHE VÀ PHỤC HỒI) Hàm Hybrid: Vẽ chim bay hoặc Lái xe (Ưu tiên dùng Cache).
+ * * @param {L.LatLng} startLatLng - Tọa độ Tâm Nhóm.
+ * @param {L.LatLng} endLatLng - Tọa độ Điểm thành viên.
+ * @param {object} pointData - Dữ liệu điểm thành viên.
+ * @param {object} group - Dữ liệu nhóm (bao gồm polylineCache).
+ */
+function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
+    const { color, groupNumber } = group;
+    const endMarker = pointData.marker;
+    
+    // Tính khoảng cách Chim Bay (dùng cho Tooltip chung)
+    const distanceInKm = (startLatLng.distanceTo(endLatLng) / 1000).toFixed(2);
+    
+    let tooltipContent;
+    let isCached = false;
 
-        const distanceInKm = (startLatLng.distanceTo(endLatLng) / 1000).toFixed(2);
+    if (isBirdMode) {
+        // === CHẾ ĐỘ CHIM BAY (Bird Mode) ===
+        L.polyline([startLatLng, endLatLng], {
+            color: color, 
+            opacity: 1.0, 
+            weight: 5, 
+            dashArray: '10, 10',
+            className: 'animated-route-line'
+        }).addTo(analysisLayer);
         
-        let tooltipContent;
-        
-        if (isBirdMode) {
-            L.polyline([startLatLng, endLatLng], {
+        tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>~ ${distanceInKm} km (bay)`;
+
+    } else {
+        // === CHẾ ĐỘ LÁI XE (Car Mode) - ƯU TIÊN DÙNG CACHE ===
+        const cachedJson = group.polylineCache[pointData.id];
+
+        if (cachedJson) {
+            // 1. NẾU CÓ CACHE: Tải và vẽ ngay lập tức
+            const coordinates = JSON.parse(cachedJson);
+            const latLngs = coordinates.map(c => L.latLng(c.lat, c.lon));
+            
+            // Vẽ đường Polyline từ chuỗi tọa độ đã cache
+            L.polyline(latLngs, {
                 color: color, 
                 opacity: 1.0, 
                 weight: 5, 
-                dashArray: '10, 10',
-                className: 'animated-route-line' 
+                dashArray: '10, 10', 
+                className: 'animated-route-line'
             }).addTo(analysisLayer);
             
-            tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>~ ${distanceInKm} km (bay)`;
-        
-        } else {
-             tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>... <i class="fa-solid fa-spinner loading-spinner"></i>`;
-             
-            routingQueue.push({
-                startLatLng,
-                endLatLng,
-                endMarker,
-                pointData, 
-                color,
-                groupNumber,
-                group
-            });
-        }
-        
-        // (*** SỬA v43 ***) Thêm điều kiện && showDistanceLabels
-        if (!isBatteryView && showDistanceLabels) {
-            const tooltip = endMarker.bindTooltip(tooltipContent, {
-                permanent: true,
-                direction: 'top',
-                className: 'distance-tooltip'
-            }).openTooltip();
-            
-            tooltip.on('add', function() {
-                const container = this.getElement();
-                if (container) {
-                    container.style.borderColor = color;
-                    
-                    L.DomEvent.on(container, 'click', (e) => {
-                        L.DomEvent.stopPropagation(e); 
-                        handleMarkerClick(pointData);
-                    });
-                }
-            });
-        }
+            tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ~ ${distanceInKm} km (cached)`;
+            isCached = true;
 
-        if (!isBirdMode) {
-            processRoutingQueue();
+        } else {
+            // 2. NẾU KHÔNG CÓ CACHE: Đẩy vào Hàng đợi (Queue)
+            tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>... <i class="fa-solid fa-spinner loading-spinner"></i>`;
+            
+            routingQueue.push({
+                startLatLng, endLatLng, endMarker, pointData, color, groupNumber, group
+            });
         }
     }
+    
+    // (*** SỬA v43 ***) Logic hiển thị Tooltip
+    if (!isBatteryView && showDistanceLabels) {
+        // Phải hủy tooltip cũ trước khi bind mới (để cập nhật nội dung)
+        if (endMarker.getTooltip()) endMarker.unbindTooltip(); 
+        
+        const tooltip = endMarker.bindTooltip(tooltipContent, {
+            permanent: true,
+            direction: 'top',
+            className: 'distance-tooltip'
+        }).openTooltip();
+        
+        // Thêm event handler cho Tooltip
+        tooltip.on('add', function() {
+            const container = this.getElement();
+            if (container) {
+                container.style.borderColor = color;
+                
+                L.DomEvent.on(container, 'click', (e) => {
+                    L.DomEvent.stopPropagation(e); 
+                    handleMarkerClick(pointData);
+                });
+            }
+        });
+    }
+
+    // Chỉ chạy hàng đợi nếu đang ở chế độ Lái xe VÀ không sử dụng cache
+    if (!isBirdMode && !isCached) {
+        processRoutingQueue();
+    }
+}
 
     /**
      * (HÀM MỚI v15) Xử lý hàng đợi routing
@@ -2806,6 +3594,14 @@
 
     // Gọi hàm lần đầu để áp dụng giá trị mặc định (từ HTML)
     updateMapFilter();
+
+    // (MỚI v54) Bắt sự kiện Enter trong ô tìm kiếm
+document.getElementById('termid-search-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Ngăn chặn form submit
+        searchByTermId();
+    }
+});
 // (*** MỚI v50 ***) Hàm đóng Bảng Xếp Hạng (gọi từ nút X)
     function closeRankPanel() {
         const panel = document.getElementById('rank-table-container');
