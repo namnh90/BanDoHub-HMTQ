@@ -23,6 +23,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+    /* KHỐI STYLE CỦA BẠN (SỬA ĐỔI RẤT ÍT) */
     html, body, #map {
         height: 100vh;
         width: 100vw;
@@ -42,7 +43,7 @@
     /* Bảng xếp hạng */
     #rank-table-container {
         position: absolute;
-        top: 10px;
+        top: 60px;
         left: 10px;
         width: 280px; 
         max-height: calc(100vh - 80px); 
@@ -50,7 +51,7 @@
         border: 1px solid #ccc;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
+        z-index: 2001;
         font-size: 14px;
         display: none; 
     }
@@ -323,8 +324,8 @@
     }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* Ẩn chỉ dẫn của Leaflet Routing Machine */
-    .leaflet-routing-container { display: none !important; }
+    /* (ĐÃ SỬA) Ẩn chỉ dẫn của Leaflet Routing Machine MẶC ĐỊNH */
+    .leaflet-routing-container { display: none; }
 
     /* (SỬA v38) Bỏ width: 110px, đổi sang 100% */
     .leaflet-bar button, .leaflet-bar button:hover {
@@ -588,9 +589,9 @@
     
     /* 3. Panel Nút Bấm: LUÔN ở góc TRÊN bên phải */
     .leaflet-top.leaflet-right {
-        top: 80px;
+        top: 360px;
         bottom: auto; 
-        right: 10px;
+        right: 0px;
         /* (*** SỬA LỖI v55 ***) Đảm bảo Menu ☰ nổi lên trên Search và Filter */
         z-index: 1005; 
     }
@@ -843,7 +844,44 @@
     display: block;
     opacity: 1;
 }
-</style>
+
+/* --- STYLE BỔ SUNG CHO MEASURE SEARCH --- */
+.search-results-container {
+    max-height: 150px;
+    overflow-y: auto;
+    border-top: 1px solid #eee;
+    background-color: white;
+    z-index: 1000;
+    position: relative; 
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+}
+.search-input-group input {
+    border-radius: 4px; /* Reset Tailwind's default */
+}
+.search-input-group button {
+    padding: 6px 10px;
+    background-color: #6b7280; /* Màu xám đậm */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+.search-input-group button:hover {
+    background-color: #4b5563; /* Màu xám tối hơn khi hover */
+}
+.search-result-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+}
+.search-result-item:hover {
+    background-color: #f0f0f0;
+}
+</style>    
 </head>
 <body>
 
@@ -866,8 +904,54 @@
         </button>
     </div>
     <div id="search-results-container">
+    </div>
+    
+    <hr class="my-3 border-t border-gray-300">
+    
+    <div id="measurement-log" style="font-size: 14px; font-weight: bold; padding: 5px 0; min-height: 20px; color: #333; border-bottom: 1px solid #ddd; margin-bottom: 10px; display: none;">
         </div>
+    <div id="search-a-container">
+        <label for="search-a-input" style="font-weight: bold; margin-bottom: 5px; display: block;">Điểm Bắt đầu (A):</label>
+        <div class="search-input-group">
+            <input type="text" id="search-a-input" placeholder="Mã CN/Tên HUB (Start)">
+            <button onclick="searchMeasurePoint('A')">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+        </div>
+        <div id="search-a-results" class="search-results-container"></div>
+    </div>
+    
+    <div id="search-b-container" style="margin-top: 10px;">
+        <label for="search-b-input" style="font-weight: bold; margin-bottom: 5px; display: block;">Điểm Kết thúc (B):</label>
+        <div class="search-input-group">
+            <input type="text" id="search-b-input" placeholder="Mã CN/Tên HUB (End)">
+            <button onclick="searchMeasurePoint('B')">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+        </div>
+        <div id="search-b-results" class="search-results-container"></div>
+    </div>
+    
+    <div class="flex space-x-2 mt-4">
+        <button id="measure-route-btn" 
+                onclick="measureRouteBetweenAandB()" 
+                class="flex-1 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out">
+            <i class="fa-solid fa-route mr-1"></i> Đo Lái Xe
+        </button>
+        <button id="measure-straight-btn" 
+                onclick="measureStraightLineBetweenAandB()" 
+                class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out">
+            <i class="fa-solid fa-ruler mr-1"></i> Đường Chim Bay
+        </button>
+        <button id="clear-measure-btn" 
+                onclick="clearMeasurement()" 
+                class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out">
+            <i class="fa-solid fa-trash mr-1"></i> Xóa Đo
+        </button>
+    </div>
+    
 </div>
+
 <div id="filter-controls-container">
     <div id="filter-controls-header">
         Tùy Chỉnh Bản Đồ
@@ -900,7 +984,275 @@
 
 
 <script>
+// (*** MỚI: HÀM CẬP NHẬT LOG KẾT QUẢ ĐO LƯỜNG CỐ ĐỊNH ***)
+function updateMeasurementLog(message, type) {
+    const logDiv = document.getElementById('measurement-log');
+    if (!logDiv) return;
 
+    // Định dạng màu sắc và icon
+    let color = '#333';
+    let icon = '';
+    
+    if (type === 'route') {
+        color = '#d97706'; // Cam (Lái xe)
+        icon = '<i class="fa-solid fa-car mr-1"></i>';
+    } else if (type === 'straight') {
+        color = '#1d4ed8'; // Xanh dương (Chim bay)
+        icon = '<i class="fa-solid fa-feather-alt mr-1"></i>';
+    } else {
+        logDiv.style.display = 'none'; // Ẩn nếu không có dữ liệu
+        return;
+    }
+
+    logDiv.style.display = 'block';
+    logDiv.style.color = color;
+    logDiv.innerHTML = `${icon} ${message}`;
+}
+// (*** HÀM CHỈ XÓA GIAO DIỆN CŨ ***)
+// Cần định nghĩa lại hàm này nếu bạn chưa có, hoặc đảm bảo nó nằm ngoài clearMeasurement()
+/**
+ * Hàm chỉ xóa các đường vẽ và marker trên map (GIỮ LẠI DỮ LIỆU selectedPointA/B).
+ */
+function clearMapVisuals() {
+    // 1. Xóa routing machine nếu có
+    if (currentRoutingControl) {
+        try {
+            map.removeControl(currentRoutingControl);
+        } catch (e) {}
+        currentRoutingControl = null;
+    }
+    // 2. Xóa đường chim bay nếu có
+    if (currentStraightLine) {
+        measureLayer.removeLayer(currentStraightLine);
+        currentStraightLine = null;
+    }
+    // 3. Xóa các marker tự tạo bởi routing machine (nếu có)
+    measureLayer.clearLayers(); 
+}
+// (*** HÀM GỐC XÓA TẤT CẢ - CHO NÚT "XÓA ĐO" ***)
+// Sửa đổi: Thêm logic xóa log cố định
+function clearMeasurement() {
+    // 1. Xóa giao diện khỏi Map
+    clearMapVisuals();
+
+    // 2. Xóa dữ liệu điểm và input
+    document.getElementById('search-a-input').value = '';
+    document.getElementById('search-b-input').value = '';
+    document.getElementById('search-a-results').style.display = 'none';
+    document.getElementById('search-b-results').style.display = 'none';
+    selectedPointA = null;
+    selectedPointB = null;
+
+    // 3. Xóa log cố định
+    updateMeasurementLog('', 'clear'); 
+
+    showToast("Đã xóa tất cả các đường đo.", "info");
+}
+// (*** HÀM ĐO ĐƯỜNG CHIM BAY - ĐÃ SỬA LỖI midPoint ***)
+function measureStraightLineBetweenAandB(isFallback = false) {
+    // [ĐÃ SỬA] Chỉ xóa giao diện cũ (nhưng giữ lại selectedPointA/B)
+    clearMapVisuals(); 
+    
+    if (!selectedPointA || !selectedPointB) {
+        showToast("Vui lòng chọn cả Điểm Bắt đầu (A) và Điểm Kết thúc (B).", "warning");
+        return;
+    }
+    
+    if (selectedPointA.id === selectedPointB.id) {
+        showToast("Hai điểm A và B phải khác nhau.", "warning");
+        return;
+    }
+    
+    if (isBatteryView) {
+        toggleBatteryView();
+    }
+    
+    // 1. Vẽ đường chim bay
+    currentStraightLine = L.polyline([selectedPointA.latlng, selectedPointB.latlng], {
+        color: '#1a73e8', // Màu xanh dương
+        weight: 5, 
+        opacity: 0.7, 
+        dashArray: '10, 5' // Đường nét đứt
+    }).addTo(measureLayer);
+
+    // 2. Tính khoảng cách
+    const distanceMeters = selectedPointA.latlng.distanceTo(selectedPointB.latlng);
+    const distanceKm = (distanceMeters / 1000).toFixed(2);
+
+    showToast(`${isFallback ? 'Đường chim bay (Lỗi Routing):' : 'Đo Đường Chim Bay:'} ${distanceKm} km.`, isFallback ? 'warning' : 'success');
+    
+    // 3. Focus vào điểm A và B
+    // (*** SỬA LỖI midPoint ***)
+    const midLat = (selectedPointA.latlng.lat + selectedPointB.latlng.lat) / 2;
+    const midLng = (selectedPointA.latlng.lng + selectedPointB.latlng.lng) / 2;
+    const centerLatLng = L.latLng(midLat, midLng);
+
+    map.panTo(centerLatLng);
+    // (*** KẾT THÚC SỬA LỖI ***)
+
+    // Cập nhật log
+    updateMeasurementLog(`Kết quả Đường Chim Bay: ${distanceKm} km`, 'straight');
+}
+// (*** HÀM TÌM KIẾM CHO SEARCH A/B ***)
+function searchMeasurePoint(searchId) {
+    const inputId = `search-${searchId.toLowerCase()}-input`;
+    const resultsId = `search-${searchId.toLowerCase()}-results`;
+    const input = document.getElementById(inputId);
+    const resultsContainer = document.getElementById(resultsId);
+    const searchTerm = String(input.value).trim().toUpperCase();
+
+    resultsContainer.innerHTML = '';
+
+    if (!searchTerm) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
+    const searchResults = allPoints.filter(p => 
+        !p.nhnn && (
+            String(p.id).toUpperCase().includes(searchTerm) || 
+            (p.tenHub && String(p.tenHub).toUpperCase().includes(searchTerm))
+        )
+    );
+
+    if (searchResults.length > 0) {
+        resultsContainer.style.display = 'block';
+        
+        searchResults.slice(0, 5).forEach(point => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            
+            let content = `ID: ${point.id}`;
+            if (point.tenHub) {
+                content += `<span class="hub-name"> (${point.tenHub})</span>`;
+            }
+            
+            item.innerHTML = content;
+            item.dataset.pointId = point.id;
+
+            item.addEventListener('click', () => {
+                selectMeasurePoint(searchId, point);
+                resultsContainer.style.display = 'none';
+            });
+
+            resultsContainer.appendChild(item);
+        });
+    } else {
+        resultsContainer.style.display = 'none';
+    }
+}
+
+// (*** HÀM GÁN ĐIỂM ĐƯỢC CHỌN CHO A HOẶC B - ĐÃ SỬA LỖI ZOOM ***)
+function selectMeasurePoint(searchId, pointData) {
+    const input = document.getElementById(`search-${searchId.toLowerCase()}-input`);
+    const resultsContainer = document.getElementById(`search-${searchId.toLowerCase()}-results`);
+    
+    if (searchId === 'A') {
+        selectedPointA = pointData;
+    } else {
+        selectedPointB = pointData;
+    }
+    
+    input.value = `${pointData.id} (${pointData.tenHub || 'PGD'})`;
+    resultsContainer.style.display = 'none'; // Ẩn kết quả sau khi chọn
+    
+    // Focus vào điểm ngay khi chọn
+    if (pointData && pointData.latlng) {
+        // [ĐÃ SỬA] Sử dụng panTo và setZoom để không zoom quá đột ngột, giữ zoom hiện tại hoặc zoom lên 15.
+        const currentZoom = map.getZoom();
+        map.panTo(pointData.latlng);
+        map.setZoom(Math.max(currentZoom, 15));
+    }
+    
+    showToast(`Đã chọn Điểm ${searchId}: ${pointData.id}`, 'info');
+}
+
+// (*** HÀM CHÍNH ĐO KÍCH THƯỚC LÁI XE - CÓ LOG CỐ ĐỊNH ***)
+function measureRouteBetweenAandB() {
+    // [ĐÃ SỬA] Chỉ xóa giao diện cũ (nhưng giữ lại selectedPointA/B)
+    clearMapVisuals();
+    
+    if (!selectedPointA || !selectedPointB) {
+        showToast("Vui lòng chọn cả Điểm Bắt đầu (A) và Điểm Kết thúc (B).", "warning");
+        return;
+    }
+    
+    if (selectedPointA.id === selectedPointB.id) {
+        showToast("Hai điểm A và B phải khác nhau.", "warning");
+        return;
+    }
+    
+    // 2. Tắt chế độ Pin (nếu đang bật)
+    if (isBatteryView) {
+        toggleBatteryView();
+    }
+    
+    showToast("Đang tính toán tuyến đường lái xe...", 'info');
+    updateMeasurementLog("Đang tính toán tuyến đường...", 'route'); // Cập nhật log tạm thời
+
+    // 3. Khởi tạo Leaflet Routing Machine
+    const router = L.Routing.control({
+        waypoints: [
+            selectedPointA.latlng,
+            selectedPointB.latlng
+        ],
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+        }),
+        show: true,
+        routeWhileDragging: false,
+        createMarker: (i, waypoint, n) => {
+             const pointData = (i === 0) ? selectedPointA : selectedPointB;
+             const icon = isBatteryView ? createBatteryIcon(pointData) : createPGDIcon();
+             return L.marker(waypoint.latLng, { 
+                 icon: icon,
+                 title: (i === 0) ? `Start: ${pointData.id}` : `End: ${pointData.id}`
+             });
+        },
+        lineOptions: {
+            styles: [{ color: '#f59e0b', weight: 7, opacity: 0.8 }]
+        }
+    });
+
+    // 4. Bắt sự kiện tuyến đường tìm thấy
+    router.on('routesfound', function(e) {
+        const route = e.routes[0];
+        const distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
+        
+        showToast(`Đo kích thước thành công! ${distanceKm} km (Lái xe)`, 'success');
+        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
+        updateMeasurementLog(`Kết quả Đo Lái Xe: ${distanceKm} km`, 'route');
+        
+        router.getContainer().style.display = 'block';
+    });
+    
+    router.on('routingerror', function(e) {
+        console.error("Lỗi định tuyến:", e.error);
+        showToast(`Lỗi tính toán đường lái xe. Đã vẽ đường chim bay thay thế.`, "error");
+        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
+        updateMeasurementLog(`Lỗi Đo Lái Xe. Xem kết quả Đường Chim Bay thay thế.`, 'route');
+
+        // Vẽ đường chim bay để thay thế
+        L.polyline([selectedPointA.latlng, selectedPointB.latlng], {
+            color: '#f59e0b', 
+            opacity: 0.5, 
+            weight: 3, 
+            dashArray: '5, 5'
+        }).addTo(measureLayer);
+    });
+
+    currentRoutingControl = router.addTo(map);
+    
+    const container = router.getContainer();
+    if (container) {
+        container.style.display = 'block';
+        container.style.position = 'absolute';
+        container.style.top = '10px';
+        container.style.left = '10px';
+        container.style.zIndex = '2000'; 
+    }
+}
     // Hàm giả định để lấy ID duy nhất cho điểm (nếu bạn chưa có)
 function getUniquePointId(lat, lon) {
     // Có thể dùng hash hoặc kết hợp Lat/Lon thành chuỗi
@@ -928,29 +1280,21 @@ function updateMarkerIcon(marker, groupColor) {
 function setMapCenterFromMarker(pointId) {
     const point = allPoints.find(p => String(p.id) === String(pointId));
     
-    if (!point) {
-        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
-        console.error("Lỗi setMapCenterFromMarker: Không tìm thấy đối tượng điểm trong allPoints.");
+    if (!point || !point.latlng) {
+        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId} hoặc không có tọa độ.`, "error");
+        console.error("Lỗi setMapCenterFromMarker: Không tìm thấy đối tượng điểm trong allPoints hoặc không có latlng.");
         return;
     }
 
-    if (!point.latlng) {
-        showToast(`Lỗi: Điểm ${pointId} không có tọa độ.`, "error");
-        console.error("Lỗi setMapCenterFromMarker: Điểm không có thuộc tính latlng.");
-        return;
-    }
-
-    // FlyTo sẽ đặt tâm bản đồ và zoom đến cấp độ 15
-    map.flyTo(point.latlng, 15);
+    // [ĐÃ SỬA] Thay thế map.flyTo(..., 15) bằng map.panTo() để giữ nguyên zoom
+    map.panTo(point.latlng);
     
     // (Tùy chọn) Kích hoạt click để mở popup nếu bạn muốn
     if (point.marker) {
-        // Tắt popup hiện tại trước
         if (currentPopup) {
             map.closePopup(currentPopup);
             currentPopup = null;
         }
-        // Kích hoạt click (sẽ mở popup hành động/pin)
         point.marker.fire('click'); 
     }
     
@@ -1235,90 +1579,82 @@ function searchByTermId() {
 }
     // (XÓA v35) Xóa bỏ CHI_NHANH_TO_VUNG_MAP, vì VUNG giờ đã có trong data
 
-    // --- 1. Khởi tạo Bản đồ ---
-    const map = L.map('map').setView([21.0285, 105.8542], 13);
-    // (MỚI v40) Tạo một "khung" (pane) riêng cho đường viền
+    // --- 1. KHAI BÁO BIẾN TOÀN CỤC BẰNG LET (FIX LỖI ReferenceError) ---
+let map = null;
+let clusterLayer = null;
+let standardLayer = null; 
+let analysisLayer = null;
+let nhnnMarkersLayer = null;
+let previewLayer = null;
+let measureLayer = null; // Layer mới
+let pointMarkersLayer = null;
+
+// --- 2. Biến lưu trữ & Cấu hình (Giữ nguyên) ---
+const RADIUS_METERS = 30 * 1000;
+const GROUP_COLORS = [
+    '#E6194B', '#3CB44B', '#FFE119', '#4363D8', '#F58231', '#911EB4', 
+    '#46F0F0', '#F032E6', '#BCF60C', '#FABEBE', '#008080', '#E6BEFF'
+];
+const PREVIEW_COLOR = '#f59e0b';
+const NHNN_PREVIEW_LINE_COLOR = '#004aad'; 
+const OVERFLOW_COLOR = '#8b5cf6'; 
+
+let allPoints = []; 
+let selectedPointA = null; // Lưu trữ dữ liệu điểm từ Search A
+let selectedPointB = null; // Lưu trữ dữ liệu điểm từ Search B
+let currentRoutingControl = null; // Lưu trữ đối tượng định tuyến hiện tại
+let currentStraightLine = null; // <<< ĐÃ THÊM BIẾN NÀY <<<
+let allGroups = []; 
+let currentRankings = []; 
+let currentPopup = null; 
+let routingQueue = [];
+let isProcessingQueue = false;
+let groups = {}; 
+const ROUTING_DELAY_MS = 500; 
+let allMarkers = {}; 
+let isBirdMode = true; 
+let isBatteryView = false;
+let showDistanceLabels = true; 
+let isClusteringEnabled = false; 
+let showNhnnMarkers = true; 
+
+
+
+// 3. HÀM KHỞI TẠO MAP VÀ LAYERS (Đã chỉnh sửa để gán cho các biến LET trên)
+function initializeMapAndLayers() {
+    // Khởi tạo Map
+    map = L.map('map').setView([21.0285, 105.8542], 13);
     map.createPane('borderPane');
-    map.getPane('borderPane').style.zIndex = 399; // Nằm dưới marker (marker là 400)
+    map.getPane('borderPane').style.zIndex = 399;
     L.tileLayer('http://{s}.google.com/vt/lyrs=r&x={x}&y={y}&z={z}&styles=feature:road|element:labels.text|visibility:off', {
         attribution: '&copy; Google Maps',
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         maxZoom: 20
     }).addTo(map);
 
-    // --- 2. Biến lưu trữ & Cấu hình ---
-    const RADIUS_METERS = 30 * 1000;
-    // (MỚI v40) Mở rộng bảng màu
-    const GROUP_COLORS = [
-        '#E6194B', '#3CB44B', '#FFE119', '#4363D8', '#F58231', '#911EB4', 
-        '#46F0F0', '#F032E6', '#BCF60C', '#FABEBE', '#008080', '#E6BEFF'
-    ];
-    
-    const PREVIEW_COLOR = '#f59e0b';
-    const NHNN_PREVIEW_LINE_COLOR = '#004aad'; // (MỚI v34) Xanh biển đậm
-    const OVERFLOW_COLOR = '#8b5cf6'; // (MỚI v37) Màu tím cho phần vượt
-    
-    let allPoints = []; 
-    let allGroups = []; 
-    let currentRankings = []; 
-    let currentPopup = null; 
-
-    // Hàng đợi Routing
-    let routingQueue = [];
-    let isProcessingQueue = false;
-    let groups = {}; // KHỞI TẠO RỖNG ĐỂ CHỈ CHỨA NHÓM BẠN TẠO
-    const ROUTING_DELAY_MS = 500; 
-    let allMarkers = {}; // Dùng để lưu trữ { pointId: markerObject }
-    let isBirdMode = true; // Mặc định là CHIM BAY
-    
-    // (MỚI v37) Trạng thái xem Pin
-    let isBatteryView = false;
-    // (MỚI v43) Trạng thái hiển thị Nhãn KM
-    let showDistanceLabels = true; // Mặc định là Bật
-
-    // (SỬA v42) Biến trạng thái Bật/Tắt Gom Cụm
-    let isClusteringEnabled = false; // (SỬA v46) Mặc định là Tắt
-    // (*** MỚI v45 ***) Trạng thái hiển thị NHNN
-    let showNhnnMarkers = true; // Mặc định là Bật
-
-    // (SỬA v42) Định nghĩa cả 2 lớp layer
-    let clusterLayer = L.markerClusterGroup({
-        chunkedLoading: true,
-        maxClusterRadius: 70,
-        disableClusteringAtZoom: 17,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: true,
+    // Khởi tạo Layers và thêm vào map nếu cần
+    clusterLayer = L.markerClusterGroup({
+        chunkedLoading: true, maxClusterRadius: 70, disableClusteringAtZoom: 17, spiderfyOnMaxZoom: true, showCoverageOnHover: true,
         iconCreateFunction: function(cluster) {
             const childCount = cluster.getChildCount();
             let cname = 'my-cluster-icon ';
-            if (childCount < 10) {
-                cname += 'small';
-            } else if (childCount < 100) {
-                cname += 'medium';
-            } else {
-                cname += 'large';
-            }
-            return L.divIcon({
-                html: `<div><span>${childCount}</span></div>`,
-                className: cname,
-                iconSize: L.point(40, 40)
-            });
+            if (childCount < 10) { cname += 'small'; } else if (childCount < 100) { cname += 'medium'; } else { cname += 'large'; }
+            return L.divIcon({ html: `<div><span>${childCount}</span></div>`, className: cname, iconSize: L.point(40, 40) });
         }
     });
+    standardLayer = L.layerGroup(); 
+    analysisLayer = L.layerGroup().addTo(map);
+    nhnnMarkersLayer = L.layerGroup().addTo(map);
+    previewLayer = L.layerGroup([], { interactive: false }).addTo(map);
     
-    let standardLayer = L.layerGroup(); // Lớp tiêu chuẩn (không gom)
-    let analysisLayer = L.layerGroup().addTo(map);
-    // (*** MỚI v44 ***) Lớp layer riêng cho NHNN, không bao giờ bị gom cụm
-    let nhnnMarkersLayer = L.layerGroup().addTo(map);
-
-    let previewLayer = L.layerGroup([], { interactive: false }).addTo(map);
-
-    // (SỬA v42) pointMarkersLayer giờ là "con trỏ" chỉ đến lớp đang hoạt động
-    // (SỬA v46.1) Sửa lỗi: Phải trỏ vào layer chính xác dựa trên isClusteringEnabled
-    let pointMarkersLayer = isClusteringEnabled ? clusterLayer : standardLayer;
+    // Layer đo lường mới
+    measureLayer = L.layerGroup().addTo(map); 
     
-    // (SỬA v42) Thêm lớp layer mặc định (đang hoạt động) vào bản đồ
+    pointMarkersLayer = isClusteringEnabled ? clusterLayer : standardLayer;
     map.addLayer(pointMarkersLayer);
+}
+
+initializeMapAndLayers(); // Chạy khởi tạo map và layers
 
 
     // --- 3. Tạo Icon Tùy chỉnh (Động) ---
@@ -1400,65 +1736,67 @@ function searchByTermId() {
         return new Intl.NumberFormat('vi-VN').format(value);
     }
     
-    /**
-     * (SỬA v39) Icon Pin với nhãn tiền VƯỢT HẠN MỨC
-     */
-    function createBatteryIcon(pointData) {
-        let tonQuy = pointData.tonQuy || 0;
-        let hanMuc = pointData.hanMuc || 0; 
-        
-        // Tránh lỗi chia cho 0
-        if (hanMuc === 0) {
-             // Nếu hạn mức là 0 mà có tiền, coi như 100% vượt
-            if (tonQuy > 0) { hanMuc = tonQuy; } else { hanMuc = 1; }
-        }
-
-        let percentage = (tonQuy / hanMuc) * 100;
-        let fillPercent = Math.min(100, percentage);
-        let overflowPercent = 0;
-        let fillColor = '#16a34a'; // Xanh lá cây
-
-        if (percentage >= 80 && percentage < 100) {
-            fillColor = '#f59e0b'; // Vàng
-        } else if (percentage >= 100) {
-            fillColor = '#dc2626'; // Đỏ
-        }
-
-        // (*** SỬA v39) Logic mới cho nhãn tiền ***
-        percentage = Math.round(percentage);
-        let amountLabelHtml = ''; // Bắt đầu trống
-        
-        if (pointData.vuotHanMuc && tonQuy > hanMuc) {
-            const overflowAmount = tonQuy - hanMuc;
-            const formattedOverflowAmount = formatCurrency(overflowAmount); // Chỉ format số tiền vượt
-            
-            // 1. Chỉ tạo nhãn nếu vượt
-            amountLabelHtml = `<div class="battery-amount-label">+${formattedOverflowAmount}</div>`;
-            
-            // 2. Tính % thanh màu tím
-            overflowPercent = Math.min(100, (overflowAmount / hanMuc) * 100); 
-        }
-        // *** Hết SỬA v39 ***
-
-        let html = `
-            <div class="battery-icon-div-wrapper"> 
-                <div class="battery-icon-container">
-                    <div class="battery-fill" style="width: ${fillPercent}%; background-color: ${fillColor};"></div>
-                    ${overflowPercent > 0 ? 
-                        `<div class="battery-overflow" style="width: ${overflowPercent}%; background-color: ${OVERFLOW_COLOR};"></div>` : ''}
-                    <span class="battery-text">${percentage}%</span>
-                </div>
-                ${amountLabelHtml} </div>
-        `;
-        
-        return L.divIcon({
-            className: 'battery-icon', // Lớp rỗng
-            html: html,
-            // (SỬA v39) Đặt iconSize [0, 0] và dùng transform trong CSS
-            iconSize: [0, 0], 
-            iconAnchor: [0, 0] // Căn vào tọa độ gốc
-        });
+/**
+ * Icon Pin với nhãn tiền VƯỢT HẠN MỨC
+ * * @param {object} pointData - Dữ liệu điểm, chứa thuộc tính isBatteryPoint.
+ * @returns {L.DivIcon | L.Icon} - Trả về icon Pin nếu là TSCN, nếu không trả về icon PGD chuẩn.
+ */
+function createBatteryIcon(pointData) {
+    
+    // (*** LOGIC MỚI: Lọc theo thuộc tính isBatteryPoint/TSCN ***)
+    // Nếu điểm KHÔNG PHẢI là TSCN, trả về icon PGD tiêu chuẩn.
+    if (!pointData.isBatteryPoint) { 
+        return createPGDIcon();
     }
+    // (*** KẾT THÚC LOGIC BỔ SUNG ***)
+
+    let tonQuy = pointData.tonQuy || 0;
+    let hanMuc = pointData.hanMuc || 0; 
+    
+    // Tránh lỗi chia cho 0
+    if (hanMuc === 0) {
+         if (tonQuy > 0) { hanMuc = tonQuy; } else { hanMuc = 1; }
+    }
+
+    let percentage = (tonQuy / hanMuc) * 100;
+    let fillPercent = Math.min(100, percentage);
+    let overflowPercent = 0;
+    let fillColor = '#16a34a'; // Xanh lá cây
+
+    if (percentage >= 80 && percentage < 100) {
+        fillColor = '#f59e0b'; // Vàng
+    } else if (percentage >= 100) {
+        fillColor = '#dc2626'; // Đỏ
+    }
+
+    percentage = Math.round(percentage);
+    let amountLabelHtml = ''; 
+    
+    if (pointData.vuotHanMuc && tonQuy > hanMuc) {
+        const overflowAmount = tonQuy - hanMuc;
+        const formattedOverflowAmount = formatCurrency(overflowAmount); 
+        amountLabelHtml = `<div class="battery-amount-label">+${formattedOverflowAmount}</div>`;
+        overflowPercent = Math.min(100, (overflowAmount / hanMuc) * 100); 
+    }
+
+    let html = `
+        <div class="battery-icon-div-wrapper"> 
+            <div class="battery-icon-container">
+                <div class="battery-fill" style="width: ${fillPercent}%; background-color: ${fillColor};"></div>
+                ${overflowPercent > 0 ? 
+                    `<div class="battery-overflow" style="width: ${overflowPercent}%; background-color: ${OVERFLOW_COLOR};"></div>` : ''}
+                <span class="battery-text">${percentage}%</span>
+            </div>
+            ${amountLabelHtml} </div>
+    `;
+    
+    return L.divIcon({
+        className: 'battery-icon', 
+        html: html,
+        iconSize: [0, 0], 
+        iconAnchor: [0, 0] 
+    });
+}
 
     // (*** MỚI v48 ***) HÀM TOGGLE ĐÃ ĐƯỢC DI CHUYỂN RA ĐÚNG VỊ TRÍ
     
@@ -1545,143 +1883,136 @@ function searchByTermId() {
         // (*** LỖI ĐÃ XÓA ***) Không còn dòng code đóng menu ☰ ở đây
     }
     
-    // --- 4. Thêm Nút điều khiển ---
-    
-   // (SỬA v50) Cập nhật Nút Thu Gọn + Style mặc định
-    L.Control.MasterControls = L.Control.extend({
-        onAdd: function(map) {
-            // 1. Tạo container chính
-            const container = L.DomUtil.create('div', 'leaflet-bar custom-controls-container');
-            L.DomEvent.disableClickPropagation(container);
-            
-            // 2. (MỚI v47) Nút Bật/Tắt Panel (Hamburger)
-            const toggleButton = L.DomUtil.create('button', 'leaflet-bar-part', container);
-            toggleButton.id = 'panel-toggle-btn';
-            toggleButton.innerHTML = '<i class="fa-solid fa-bars"></i>'; // Icon Hamburger
-            
-            // (*** SỬA LỖI v48.1 ***)
-            toggleButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                // Logic Bật/Tắt class 'expanded' trên container chính
-                if (L.DomUtil.hasClass(container, 'expanded')) {
-                    L.DomUtil.removeClass(container, 'expanded');
-                } else {
-                    L.DomUtil.addClass(container, 'expanded');
-                }
-            };
-            // (*** HẾT SỬA LỖI ***)
-            
-            // 3. (MỚI v47) Wrapper cho tất cả các nút con
-            const buttonsWrapper = L.DomUtil.create('div', 'buttons-wrapper', container);
-            
-            // --- 4. Bắt đầu các nút con ---
-            
-            // (*** MỚI v50 ***) Nút ĐÓNG (Collapse) Panel
-            const collapseButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
-            collapseButton.id = 'panel-collapse-btn';
-            // (SỬA v50) Bỏ chữ, chỉ để icon
-            collapseButton.innerHTML = '<i class="fa-solid fa-chevron-right w-4 h-4"></i>';
-            collapseButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                // Chỉ TẮT
+// --- 4. Thêm Nút điều khiển ---
+   
+// (SỬA v50) Cập nhật Nút Thu Gọn + Style mặc định
+L.Control.MasterControls = L.Control.extend({
+    onAdd: function(map) {
+        // 1. Tạo container chính
+        const container = L.DomUtil.create('div', 'leaflet-bar custom-controls-container');
+        L.DomEvent.disableClickPropagation(container);
+        
+        // 2. (MỚI v47) Nút Bật/Tắt Panel (Hamburger)
+        const toggleButton = L.DomUtil.create('button', 'leaflet-bar-part', container);
+        toggleButton.id = 'panel-toggle-btn';
+        toggleButton.innerHTML = '<i class="fa-solid fa-bars"></i>'; // Icon Hamburger
+        
+        // (*** SỬA LỖI v48.1 ***)
+        toggleButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            // Logic Bật/Tắt class 'expanded' trên container chính
+            if (L.DomUtil.hasClass(container, 'expanded')) {
                 L.DomUtil.removeClass(container, 'expanded');
-            };
-            // (*** HẾT MỚI v50 ***)
+            } else {
+                L.DomUtil.addClass(container, 'expanded');
+            }
+        };
+        
+        // 3. (MỚI v47) Wrapper cho tất cả các nút con
+        const buttonsWrapper = L.DomUtil.create('div', 'buttons-wrapper', container);
+        
+        // --- 4. Bắt đầu các nút con ---
+        
+        // (*** MỚI v50 ***) Nút ĐÓNG (Collapse) Panel
+        const collapseButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+        collapseButton.id = 'panel-collapse-btn';
+        collapseButton.innerHTML = '<i class="fa-solid fa-chevron-right w-4 h-4"></i>';
+        collapseButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            L.DomUtil.removeClass(container, 'expanded');
+        };
+        
+        // (*** MỚI v48 ***) Nút Bảng Xếp Hạng (Toggle)
+        const rankButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+        rankButton.id = 'rank-toggle-btn';
+        rankButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+        rankButton.innerHTML = '<i class="fa-solid fa-trophy w-4 h-4"></i> <span class="button-text">Xếp Hạng</span>';
+        rankButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleRankPanel(); // Hàm mới
+        };
+        rankButton.style.display = 'none'; 
 
-            // (*** MỚI v48 ***) Nút Bảng Xếp Hạng (Toggle)
-            const rankButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
-            rankButton.id = 'rank-toggle-btn';
-            // (SỬA v50) Style Tắt (Mặc định)
-            rankButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
-            rankButton.innerHTML = '<i class="fa-solid fa-trophy w-4 h-4"></i> <span class="button-text">Xếp Hạng</span>';
-            rankButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleRankPanel(); // Hàm mới
-            };
-            // (Ẩn nút này đi ban đầu, JS sẽ bật lên nếu có data)
-            rankButton.style.display = 'none'; 
+        // (*** MỚI v48 ***) Nút Tùy Chỉnh Map (Filter)
+        const filterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+        filterButton.id = 'filter-toggle-btn';
+        filterButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+        filterButton.innerHTML = '<i class="fa-solid fa-sliders w-4 h-4"></i> <span class="button-text">Tùy Chỉnh Map</span>';
+        filterButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleFilterControls();
+        };
 
-            // (*** MỚI v48 ***) Nút Tùy Chỉnh Map (Filter)
-            const filterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
-            filterButton.id = 'filter-toggle-btn';
-            // (SỬA v50) Style Tắt (Mặc định)
-            filterButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
-            filterButton.innerHTML = '<i class="fa-solid fa-sliders w-4 h-4"></i> <span class="button-text">Tùy Chỉnh Map</span>';
-            filterButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleFilterControls();
-            };
-
-            // Nút Routing
-            const routingButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg bird-mode', buttonsWrapper);
-            routingButton.id = 'routing-toggle-btn'; 
-            routingButton.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> <span class="button-text">Đường chim Bay</span>';
-            routingButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleRoutingMode();
-            };
-            
-            // Nút Chế độ Pin
-            const batteryButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg pin-mode', buttonsWrapper); 
-            batteryButton.id = 'battery-toggle-btn'; 
-            batteryButton.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>'; 
-            batteryButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
+        // Nút Routing
+        const routingButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg bird-mode', buttonsWrapper);
+        routingButton.id = 'routing-toggle-btn'; 
+        routingButton.innerHTML = '<i class="fa-solid fa-feather w-4 h-4"></i> <span class="button-text">Đường chim Bay</span>';
+        routingButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleRoutingMode();
+        };
+        
+        // Nút Chế độ Pin (FIX LỖI: Gọi hàm trực tiếp)
+        const batteryButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg pin-mode', buttonsWrapper); 
+        batteryButton.id = 'battery-toggle-btn'; 
+        batteryButton.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>'; 
+        batteryButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            // GỌI HÀM AN TOÀN HƠN
+            if (typeof toggleBatteryView === 'function') {
                 toggleBatteryView();
-            };
+            } else {
+                console.error("Hàm toggleBatteryView chưa được định nghĩa.");
+            }
+        };
 
-            // Nút Bật/Tắt Gom Cụm
-            const clusterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg cluster-off', buttonsWrapper); 
-            clusterButton.id = 'cluster-toggle-btn';
-            clusterButton.innerHTML = '<i class="fa-solid fa-braille w-4 h-4"></i> <span class="button-text">Gom Cụm (Tắt)</span>'; 
-            clusterButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleClustering();
-            };
+        // Nút Bật/Tắt Gom Cụm
+        const clusterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg cluster-off', buttonsWrapper); 
+        clusterButton.id = 'cluster-toggle-btn';
+        clusterButton.innerHTML = '<i class="fa-solid fa-braille w-4 h-4"></i> <span class="button-text">Gom Cụm (Tắt)</span>'; 
+        clusterButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleClustering();
+        };
 
-            // Nút Bật/Tắt Nhãn KM
-            const labelsButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg labels-on', buttonsWrapper);
-            labelsButton.id = 'labels-toggle-btn';
-            labelsButton.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">Nhãn KM (Bật)</span>';
-            labelsButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleDistanceLabels();
-            };
-            
-            // Nút Bật/Tắt NHNN
-            const nhnnButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg nhnn-on', buttonsWrapper);
-            nhnnButton.id = 'nhnn-toggle-btn';
-            nhnnButton.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
-            nhnnButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                toggleNhnn();
-            };
-            // (*** MỚI ***) Nút LƯU/EXPORT DỮ LIỆU NHÓM
-            const saveButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg btn-add', buttonsWrapper);
-            saveButton.id = 'save-groups-btn';
-            saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up w-4 h-4"></i> <span class="button-text">Lưu Dữ Liệu Nhóm</span>';
-            saveButton.onclick = (e) => {
-                L.DomEvent.stopPropagation(e);
-                exportGroupsData(); // Gọi hàm xử lý chính
-            };
-            // --- Hết các nút con ---
+        // Nút Bật/Tắt Nhãn KM
+        const labelsButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg labels-on', buttonsWrapper);
+        labelsButton.id = 'labels-toggle-btn';
+        labelsButton.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">Nhãn KM (Bật)</span>';
+        labelsButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleDistanceLabels();
+        };
+        
+        // Nút Bật/Tắt NHNN
+        const nhnnButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg nhnn-on', buttonsWrapper);
+        nhnnButton.id = 'nhnn-toggle-btn';
+        nhnnButton.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
+        nhnnButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            toggleNhnn();
+        };
+        // (*** MỚI ***) Nút LƯU/EXPORT DỮ LIỆU NHÓM
+        const saveButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg btn-add', buttonsWrapper);
+        saveButton.id = 'save-groups-btn';
+        saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up w-4 h-4"></i> <span class="button-text">Lưu Dữ Liệu Nhóm</span>';
+        saveButton.onclick = (e) => {
+            L.DomEvent.stopPropagation(e);
+            exportGroupsData(); // Gọi hàm xử lý chính
+        };
+        // --- Hết các nút con ---
 
-            // (MỚI v47) Khi click vào bản đồ, đóng panel (nếu đang mở trên di động)
-            map.on('click', () => {
-                L.DomUtil.removeClass(container, 'expanded');
-            });
-            // (MỚI v47) Khi kéo bản đồ, cũng đóng panel
-            map.on('dragstart', () => {
-                 L.DomUtil.removeClass(container, 'expanded');
-            });
+        // (MỚI v47) Khi click vào bản đồ, đóng panel (nếu đang mở trên di động)
+        map.on('click', () => { L.DomUtil.removeClass(container, 'expanded'); });
+        map.on('dragstart', () => { L.DomUtil.removeClass(container, 'expanded'); });
 
-            return container;
-        },
-        onRemove: function(map) {}
-    });
-    
-    // Thêm control mới vào bản đồ
-    new L.Control.MasterControls({ position: 'topright' }).addTo(map);
+        return container;
+    },
+    onRemove: function(map) {}
+});
+
+// Thêm control mới vào bản đồ (Chắc chắn chạy sau initializeMapAndLayers())
+new L.Control.MasterControls({ position: 'topright' }).addTo(map);
     // --- 5. Các Hàm Chức năng ---
 // Tên khóa dùng để lưu trữ trong localStorage
 const LOCAL_STORAGE_KEY = 'HMTQ_SAVED_GROUPS_V2'; // Dùng V2 để đảm bảo lưu Polyline Cache
@@ -1872,9 +2203,10 @@ function popup_deleteGroup(groupId) {
     showToast(`Đã hủy thành công Nhóm ${groupNumber} và đưa ${pointsToReset.length} điểm về trạng thái chưa nhóm.`, "success");
 }
 /**
- * (SỬA ĐỔI v52: Thêm tham số tenHubStr và thuộc tính tenHub)
+ * (SỬA LỖI VÀ BỔ SUNG) Hàm khởi tạo dữ liệu điểm và thêm Marker vào bản đồ.
+ * Đã sửa lỗi ReferenceError: pointId is not defined.
  */
-function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr, hubYesStr, tenHubStr) { 
+function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr, hubYesStr, tenHubStr, plDgdStr) { // <--- THÊM plDgdStr
     // (SỬA v44.1) Logic check 'isNHNN' này mạnh hơn
     const isNHNN = (nhnn === true || String(nhnn).toLowerCase() === 'true' || String(nhnn) === '1');
     
@@ -1886,24 +2218,29 @@ function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanM
 
     const isHubPoint = String(hubYesStr).trim().toUpperCase() === 'YES';
     
-    // (*** MỚI - Lấy tên HUB ***)
+    // (*** LOGIC MỚI: XÁC ĐỊNH ĐIỂM PIN (TSCN) ***)
+    const isBatteryPoint = String(plDgdStr).trim().toUpperCase() === 'TSCN'; 
+    
     const cleanTenHub = tenHubStr ? String(tenHubStr).trim() : null;
 
     
-    // (*** SỬA v44 ***) Logic tạo marker
+    // (*** KHẮC PHỤC LỖI REFERENCE ERROR Ở ĐÂY ***)
     const newMarker = L.marker(latlng, { 
         icon: isNHNN ? createNHNNIcon() : createPGDIcon() 
     });
 
-    // (*** MỚI v44 ***)
+    // 1. KHAI BÁO pointId NGAY LẬP TỨC
+    const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
+
+    // 2. LƯU MARKER VÀO BIẾN TOÀN CỤC BẰNG pointId
+    allMarkers[pointId] = newMarker; 
+    // ===========================================
+    
+    // (*** MỚI v44 ***) Thêm vào layer NHNN nếu cần
     if (isNHNN) {
         newMarker.addTo(nhnnMarkersLayer); 
     }
     
-    const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
-// === LƯU MARKER VÀO BIẾN TOÀN CỤC ===
-    allMarkers[pointId] = newMarker; 
-    // ====================================
     const newPointData = {
         id: pointId, 
         latlng: latlng,
@@ -1917,11 +2254,10 @@ function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanM
         hanMuc: cleanHanMuc,
         vuotHanMuc: isVuotHanMuc,
         isHub: isHubPoint, 
-        tenHub: cleanTenHub // <--- THÊM THUỘC TÍNH TENHUB
+        tenHub: cleanTenHub,
+        isBatteryPoint: isBatteryPoint // <--- THUỘC TÍNH MỚI DÙNG CHO LỌC PIN
     };
     
-    // ... (Code gắn sự kiện giữ nguyên) ...
-
     if (isNHNN) {
         newMarker.on('click', (e) => {
             L.DomEvent.stopPropagation(e); 
@@ -1990,9 +2326,6 @@ function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanM
         // 3. (QUAN TRỌNG) Gọi lại hàm applyFilter
         applyFilter();
     }
-/**
- * (SỬA ĐỔI v52: Thêm tham số item.TENHUB)
- */
 function loadPreloadedData() {
     const powerAutomateUrl = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7a3ba54b6604025882ae481816180bb/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=R88_MePGo47lYzv0ndIiVxbRUcMncU26zdMq9HGw9hs'; 
 
@@ -2033,7 +2366,8 @@ function loadPreloadedData() {
                     item.VUOT_HAN_MUC,
                     item.HMTQ_ngay,
                     item.HUBYES,
-                    item.TENHUB // <--- THÊM THAM SỐ TENHUB
+                    item.TENHUB,
+                    item.PL_DGD // <--- THAM SỐ THỨ 11 MỚI
                 ); 
                 bounds.extend(latlng);
             } else {
@@ -2048,9 +2382,7 @@ function loadPreloadedData() {
         updateRankTable(); 
 
         updateMarkersVisibility();
-        // === BỔ SUNG: TẢI LẠI DỮ LIỆU NHÓM ĐÃ LƯU ===
         loadGroupsFromLocalStorage(); 
-        // =============================================
         if (bounds.isValid()) {
             map.fitBounds(bounds.pad(0.1));
         }
@@ -2343,53 +2675,60 @@ function loadGroupsFromLocalStorage() {
         updateRankTable();         
     }
     
-    /**
-     * (SỬA ĐỔI v44 - Tách logic hiển thị PGD và NHNN)
-     */
-    function updateMarkersVisibility() {
+/**
+ * (SỬA LỚN) Cập nhật hiển thị marker dựa trên bộ lọc VÀ chế độ Pin.
+ * Đảm bảo ẩn các điểm PGD (không phải TSCN) khi ở chế độ Pin.
+ */
+function updateMarkersVisibility() {
         
-        // --- 1. XỬ LÝ CÁC ĐIỂM PGD/ATM (CÓ GOM CỤM) ---
-        
-        // 1a. Lấy danh sách marker PGD/ATM (KHÔNG phải NHNN) cần hiển thị
-        const visiblePgdMarkers = allPoints
-            .filter(p => !p.nhnn && p.isVisible) // <-- Thêm điều kiện !p.nhnn
-            .map(p => p.marker);
+    // --- 1. XỬ LÝ CÁC ĐIỂM PGD/ATM (CÓ GOM CỤM) ---
+    
+    // 1a. Lấy danh sách marker PGD/ATM (KHÔNG phải NHNN) cần hiển thị
+    const visiblePgdMarkers = allPoints
+        .filter(p => !p.nhnn)
+        .filter(p => {
+             // (*** LOGIC LỌC MỚI CHO CHẾ ĐỘ PIN ***)
+             // ẨN TẤT CẢ CÁC ĐIỂM KHÔNG PHẢI TSCN KHI Ở CHẾ ĐỘ PIN
+             if (isBatteryView && !p.isBatteryPoint) {
+                 return false; 
+             }
+             // (*** KẾT THÚC LOGIC LỌC MỚI ***)
+             
+             // Giữ nguyên điều kiện lọc cũ (Filter UI)
+             return p.isVisible; 
+        })
+        .map(p => p.marker);
 
-        // 1b. Xóa các PGD/ATM marker cũ khỏi lớp đang hoạt động
-        pointMarkersLayer.clearLayers(); 
+    // 1b. Xóa các PGD/ATM marker cũ khỏi lớp đang hoạt động
+    pointMarkersLayer.clearLayers(); 
 
-        // 1c. Thêm marker PGD/ATM vào lại, tùy theo loại layer
-        if (isClusteringEnabled) {
-            // Chế độ GOM CỤM: Dùng .addLayers()
-            pointMarkersLayer.addLayers(visiblePgdMarkers);
-        } else {
-            // Chế độ TIÊU CHUẨN: Dùng .addLayer()
-            visiblePgdMarkers.forEach(marker => {
-                pointMarkersLayer.addLayer(marker);
-            });
-        }
-
-        // --- 2. XỬ LÝ CÁC ĐIỂM NHNN (KHÔNG GOM CỤM) ---
-        
-        // Lặp qua tất cả các điểm NHNN và ẩn/hiện chúng trên lớp cố định
-        allPoints.filter(p => p.nhnn).forEach(nhnnPoint => {
-            if (nhnnPoint.isVisible) {
-                // Nếu 'visible' và chưa có trên layer, thêm vào
-                if (!nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
-                    nhnnMarkersLayer.addLayer(nhnnPoint.marker);
-                }
-            } else {
-                // Nếu 'invisible' và đang có trên layer, xóa đi
-                if (nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
-                    // Xóa tooltip nếu có, trước khi xóa marker
-                    if (nhnnPoint.marker.getTooltip()) {
-                        nhnnPoint.marker.unbindTooltip();
-                    }
-                    nhnnMarkersLayer.removeLayer(nhnnPoint.marker);
-                }
-            }
+    // 1c. Thêm marker PGD/ATM vào lại, tùy theo loại layer
+    if (isClusteringEnabled) {
+        pointMarkersLayer.addLayers(visiblePgdMarkers);
+    } else {
+        visiblePgdMarkers.forEach(marker => {
+            pointMarkersLayer.addLayer(marker);
         });
     }
+
+    // --- 2. XỬ LÝ CÁC ĐIỂM NHNN (KHÔNG GOM CỤM) ---
+    
+    // Lặp qua tất cả các điểm NHNN và ẩn/hiện chúng trên lớp cố định
+    allPoints.filter(p => p.nhnn).forEach(nhnnPoint => {
+        if (nhnnPoint.isVisible) {
+            if (!nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
+                nhnnMarkersLayer.addLayer(nhnnPoint.marker);
+            }
+        } else {
+            if (nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
+                if (nhnnPoint.marker.getTooltip()) {
+                    nhnnPoint.marker.unbindTooltip();
+                }
+                nhnnMarkersLayer.removeLayer(nhnnPoint.marker);
+            }
+        }
+    });
+}
     
     // --- HẾT CỤM LOGIC LỌC v35 ---
 
@@ -2603,7 +2942,7 @@ function renderRankTable() {
     });
 }
 /**
- * (MỚI v51) Hàm tập trung (Focus) vào một điểm trên bản đồ.
+ * (SỬA LỖI ZOOM) Hàm tập trung (Focus) vào một điểm trên bản đồ.
  */
 function focusOnPoint(pointId) {
     const point = allPoints.find(p => String(p.id) === String(pointId));
@@ -2613,14 +2952,12 @@ function focusOnPoint(pointId) {
         return;
     }
     
-    // (Kiểm tra điểm có bị ẩn bởi filter không)
     if (!point.isVisible) {
         showToast(`Điểm ID ${pointId} đang bị ẩn bởi bộ lọc hiện tại.`, "warning");
     }
 
-    // 1. Zoom đến điểm (Sử dụng flyTo cho hiệu ứng mượt mà)
-    const currentZoom = map.getZoom();
-    map.flyTo(point.latlng, Math.max(currentZoom, 17)); // Zoom tối thiểu 17
+    // [ĐÃ SỬA] Thay map.flyTo bằng map.panTo để chỉ di chuyển, giữ nguyên zoom
+    map.panTo(point.latlng); 
 
     // 2. Mở popup (nếu có)
     if (currentPopup) {
@@ -2628,21 +2965,21 @@ function focusOnPoint(pointId) {
         currentPopup = null;
     }
 
-    // (MỚI) Kích hoạt sự kiện click của marker (như click bằng tay)
-    // Điều này sẽ mở lại popup hành động/pin nếu điểm đó chưa bị gom cụm
+    // Kích hoạt sự kiện click của marker (như click bằng tay)
     if (point.marker) {
         point.marker.fire('click');
     }
     
-    // 3. (Nếu đang dùng gom cụm) Đảm bảo điểm hiển thị
+    // [ĐÃ XÓA] Loại bỏ logic zoomToShowLayer để tránh thay đổi zoom
+    /*
     if (isClusteringEnabled && pointMarkersLayer.hasLayer(clusterLayer)) {
         pointMarkersLayer.zoomToShowLayer(point.marker, () => {
-            // Sau khi zoom xong, kích hoạt click lần nữa để đảm bảo popup hiện
             if (point.marker) {
                 point.marker.fire('click');
             }
         });
     }
+    */
 
     showToast(`Đã tập trung vào Điểm ID: ${pointId}`, 'info');
 }
@@ -2982,12 +3319,7 @@ function popup_createGroup(pointId) {
     updateFilterOptions();
 
     // Fix Lỗi Zoom
-    const tempCircle = L.circle(centerPoint.latlng, { radius: RADIUS_METERS }).addTo(analysisLayer);
-    const circleBounds = tempCircle.getBounds();
-    if (circleBounds.isValid()) {
-        map.fitBounds(circleBounds.pad(0.1)); 
-    }
-    analysisLayer.removeLayer(tempCircle); // Gỡ bỏ vòng tròn tạm thời
+
 
     const message = (coveredPoints.length > 0) 
         ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
@@ -3031,144 +3363,113 @@ function movePoint(pointId, newGroupId) {
     // đã được gọi bên trong movePointToGroup.
 }
 
-    /**
-     * (*** SỬA ĐỔI v43 ***) 
-     * Thêm điều kiện showDistanceLabels cho nhãn KM của NHNN.
-     */
-    function drawAllGroups() {
-        clearAnalysisVisuals(); 
-        let bounds = L.latLngBounds();
+/**
+ * (*** SỬA ĐỔI MỚI ***) 
+ * Ẩn vòng tròn/line khi ở chế độ Pin.
+ */
+function drawAllGroups() {
+    clearAnalysisVisuals(); 
+    let bounds = L.latLngBounds();
+    
+    const allNHNNPoints = allPoints.filter(p => p.nhnn && p.isVisible);
+
+    allGroups.forEach(group => {
+        const { centerPoint, points, color, groupNumber } = group;
+
+        if (!centerPoint.isVisible) { return; }
         
-        const allNHNNPoints = allPoints.filter(p => p.nhnn && p.isVisible);
-
-        allGroups.forEach(group => {
-            const { centerPoint, points, color, groupNumber } = group;
-
-            if (!centerPoint.isVisible) {
-                return; 
-            }
+        // Chỉ vẽ Vòng tròn và Line nếu KHÔNG ở chế độ Pin
+        if (!isBatteryView) {
             
-            // (*** MỚI v40 ***) Vẽ vòng tròn 30km cố định
+            // Vẽ vòng tròn 30km cố định
             L.circle(centerPoint.latlng, {
-                radius: RADIUS_METERS,
-                color: color, 
-                weight: 2.5, 
-                opacity: 0.7,
-                fillColor: color, 
-                fillOpacity: 0.1
-            }).addTo(analysisLayer); // Thêm vào lớp CỐ ĐỊNH
+                radius: RADIUS_METERS, color: color, weight: 2.5, opacity: 0.7,
+                fillColor: color, fillOpacity: 0.1
+            }).addTo(analysisLayer); 
             
-            bounds.extend(centerPoint.latlng);
-            
-            // (*** MỚI v40 ***) Vẽ line từ TÂM NHÓM đến các NHNN lân cận
+            // Vẽ line từ TÂM NHÓM đến các NHNN lân cận
             allNHNNPoints.forEach(nhnnPoint => {
                 const distance = centerPoint.latlng.distanceTo(nhnnPoint.latlng);
                 if (distance <= RADIUS_METERS) {
-                    
-                    const distanceInKm = (distance / 1000).toFixed(2);
-                    const labelContent = `~ ${distanceInKm} km`;
-
-                    const line = L.polyline([centerPoint.latlng, nhnnPoint.latlng], {
-                        color: NHNN_PREVIEW_LINE_COLOR, // Xanh biển đậm
-                        weight: 2,
-                        opacity: 0.9,
-                        dashArray: '8, 4', 
-                        className: 'animated-route-line' 
-                    }).addTo(analysisLayer); 
-
-                    // (*** SỬA v43 ***) Chỉ binding tooltip nếu được BẬT
-                    if (showDistanceLabels) {
-                        line.bindTooltip(labelContent, {
-                            permanent: true,
-                            direction: 'center',
-                            className: 'distance-tooltip',
-                            offset: [0, -8] 
-                        });
-                    }
-                    // (*** HẾT SỬA v43 ***)
+                    const distanceInKm = (distance / 1000).toFixed(2); const labelContent = `~ ${distanceInKm} km`;
+                    const line = L.polyline([centerPoint.latlng, nhnnPoint.latlng], { color: NHNN_PREVIEW_LINE_COLOR, weight: 2, opacity: 0.9, dashArray: '8, 4', className: 'animated-route-line' }).addTo(analysisLayer);
+                    if (showDistanceLabels) { line.bindTooltip(labelContent, { permanent: true, direction: 'center', className: 'distance-tooltip', offset: [0, -8] }); }
                 }
             });
-            // (*** HẾT MỚI v40 ***)
-            
-            const visiblePointsInGroup = points.filter(p => p.isVisible);
-
-            points.forEach(pointData => {
-                if (!pointData.isVisible) {
-                    return;
-                }
-
-                bounds.extend(pointData.latlng); 
-
-                if (pointData.id === centerPoint.id) {
-                    pointData.marker.setIcon(createCenterPointIcon(color));
-                    
-                    // (SỬA v43) Nhãn "TÂM NHÓM" này không phải nhãn KM, nên ta giữ lại
-                    const centerTooltip = pointData.marker.bindTooltip(`<b>TÂM NHÓM ${groupNumber}</b><br>(${visiblePointsInGroup.length} điểm)`, {
-                        permanent: true, direction: 'bottom', offset: L.point(0, 10), className: 'distance-tooltip'
-                    }).openTooltip();
-                    
-                    centerTooltip.on('add', function() {
-                        const container = this.getElement();
-                        if (container) {
-                            container.style.borderColor = color;
-                            L.DomEvent.on(container, 'click', (e) => {
-                                L.DomEvent.stopPropagation(e); 
-                                handleMarkerClick(pointData);
-                            });
-                        }
-                    });
-                } else {
-                    // (SỬA v37) Thành viên nhóm dùng icon Pin hoặc PGD
-                    pointData.marker.setIcon(isBatteryView ? createBatteryIcon(pointData) : createPGDIcon());
-                    
-                    calculateAndDrawLine(
-                        centerPoint.latlng, 
-                        pointData.latlng, 
-                        pointData, 
-                        group
-                    );
-                }
-            });
-        });
-        
-        if (bounds.isValid() && allPoints.filter(p => p.isVisible).length > 1) { 
-            map.fitBounds(bounds.pad(0.15));
         }
-    }
-    
-    /**
-     * (SỬA ĐỔI v37: Reset về ảnh/pin, giữ NHNN)
-     */
-    function clearAnalysisVisuals() {
-        allGroups.forEach(group => {
-            if (group.routingControls) {
-                group.routingControls.forEach(router => {
-                    try {
-                        map.removeControl(router); 
-                    } catch (e) {
+        
+        bounds.extend(centerPoint.latlng);
+        
+        const visiblePointsInGroup = points.filter(p => p.isVisible);
+
+        points.forEach(pointData => {
+            if (!pointData.isVisible) { return; }
+            bounds.extend(pointData.latlng); 
+
+            if (pointData.id === centerPoint.id) {
+                pointData.marker.setIcon(createCenterPointIcon(color));
+                const centerTooltip = pointData.marker.bindTooltip(`<b>TÂM NHÓM ${groupNumber}</b><br>(${visiblePointsInGroup.length} điểm)`, { permanent: true, direction: 'bottom', offset: L.point(0, 10), className: 'distance-tooltip' }).openTooltip();
+                centerTooltip.on('add', function() {
+                    const container = this.getElement();
+                    if (container) { 
+                        container.style.borderColor = color; 
+                        L.DomEvent.on(container, 'click', (e) => { L.DomEvent.stopPropagation(e); handleMarkerClick(pointData); }); 
                     }
                 });
+            } else {
+                // Thành viên nhóm dùng icon Pin hoặc PGD (Icon Pin được kiểm tra TSCN bên trong hàm createBatteryIcon)
+                pointData.marker.setIcon(isBatteryView ? createBatteryIcon(pointData) : createPGDIcon());
+                
+                // Chỉ vẽ đường line/routing nếu KHÔNG ở chế độ Pin
+                if (!isBatteryView) {
+                    calculateAndDrawLine(centerPoint.latlng, pointData.latlng, pointData, group);
+                }
             }
+        });
+    });
+}
+    
+/**
+ * (ĐÃ SỬA LỖI REMOVELAYER) Xóa toàn bộ đường phân tích (vòng tròn, polyline)
+ */
+function clearAnalysisVisuals() {
+    allGroups.forEach(group => {
+        if (group.routingControls) {
+            group.routingControls.forEach(router => {
+                try {
+                    // Xóa control định tuyến
+                    map.removeControl(router); 
+                } catch (e) {
+                    // Xử lý lỗi nếu router đã bị xóa
+                }
+            });
+            // Rất quan trọng: Xóa sạch mảng sau khi xóa khỏi map
             group.routingControls = []; 
-        });
+        }
+    });
 
-        analysisLayer.clearLayers(); 
-
-        allPoints.filter(p => p.isVisible).forEach(p => {
-             if (p.nhnn) { // Giữ nguyên icon NHNN
-                 p.marker.setIcon(createNHNNIcon());
-             } else if (p.groupId === null) { // Điểm chưa nhóm
-                 p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
-             } else if (p.groupId !== 'REFERENCE') { // Điểm đã vào nhóm (không phải NHNN)
-                // Reset về icon PGD/Pin
-                 p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
-             }
-             
-             if (p.marker.getTooltip()) {
-                 p.marker.unbindTooltip();
-            }
-        });
+    analysisLayer.clearLayers();
+    
+    // (FIX LỖI) Kiểm tra measureLayer có tồn tại trước khi dùng
+    if (measureLayer) { 
+        measureLayer.clearLayers(); 
     }
+
+    allPoints.filter(p => p.isVisible).forEach(p => {
+         if (p.nhnn) { // Giữ nguyên icon NHNN
+             p.marker.setIcon(createNHNNIcon());
+         } else if (p.groupId === null) { // Điểm chưa nhóm
+             p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
+         } else if (p.groupId !== 'REFERENCE') { // Điểm đã vào nhóm (không phải NHNN)
+             // Reset về icon PGD/Pin
+             p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
+         }
+         
+         if (p.marker.getTooltip()) {
+             p.marker.unbindTooltip();
+         }
+    });
+}
 
 
     /**
@@ -3271,120 +3572,133 @@ function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
     }
 }
 
-    /**
-     * (HÀM MỚI v15) Xử lý hàng đợi routing
-     * (SỬA v43) Thêm điều kiện showDistanceLabels
-     */
-    async function processRoutingQueue() {
-        if (isBirdMode) {
-            routingQueue = []; 
-            isProcessingQueue = false;
-            return;
-        }
-
-        if (isProcessingQueue || routingQueue.length === 0) {
-            return;
-        }
-        
-        isProcessingQueue = true;
-        const task = routingQueue.shift(); 
-        
-        if (!task) {
-            isProcessingQueue = false;
-            return;
-        }
-
-        const { startLatLng, endLatLng, endMarker, pointData, color, groupNumber, group } = task;
-
-        // (SỬA v44.1) Kiểm tra cả 2 layer
-        const isMarkerOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
-
-        if (!pointData.isVisible || !endMarker || !isMarkerOnMap) {
-            finishTask();
-            return;
-        }
-
-        const router = L.Routing.control({
-            waypoints: [startLatLng, endLatLng],
-            show: false,
-            addWaypoints: false,
-            createMarker: () => null,
-            lineOptions: {
-                addWaypoints: false,
-                styles: [{ 
-                    color: color, 
-                    opacity: 1.0, 
-                    weight: 5, 
-                    dashArray: '10, 10',
-                    className: 'animated-route-line' 
-                }]
-            } 
-        }).addTo(map);
-
-        group.routingControls.push(router);
-
-        router.on('routesfound', function(e) {
-            const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
-            // (*** SỬA v43 ***) Thêm điều kiện && showDistanceLabels
-            if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
-                const distanceInKm = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-                const tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ${distanceInKm} km (lái xe)`;
-                const newTooltip = endMarker.bindTooltip(tooltipContent, {
-                    permanent: true, direction: 'top', className: 'distance-tooltip'
-                }).openTooltip();
-                
-                newTooltip.on('add', function() {
-                    const container = this.getElement();
-                    if (container) {
-                        container.style.borderColor = color;
-                        L.DomEvent.on(container, 'click', (e) => {
-                             L.DomEvent.stopPropagation(e);
-                             handleMarkerClick(pointData);
-                        });
-                    }
-                });
-            }
-            finishTask();
-        });
-
-        router.on('routingerror', function(e) {
-            const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
-            // (*** SỬA v43 ***) Thêm điều kiện && showDistanceLabels
-            if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
-                L.polyline([startLatLng, endLatLng], {
-                    color: color, 
-                    opacity: 1.0, 
-                    weight: 5, 
-                    dashArray: '10, 10',
-                    className: 'animated-route-line' 
-                }).addTo(analysisLayer); 
-            
-                const distanceInKm = (startLatLng.distanceTo(endLatLng) / 1000).toFixed(2);
-                const tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>~ ${distanceInKm} km (bay)`;
-                const newTooltip = endMarker.bindTooltip(tooltipContent, {
-                    permanent: true, direction: 'top', className: 'distance-tooltip'
-                }).openTooltip();
-                
-                newTooltip.on('add', function() {
-                    const container = this.getElement();
-                    if (container) {
-                        container.style.borderColor = color;
-                        L.DomEvent.on(container, 'click', (e) => {
-                             L.DomEvent.stopPropagation(e);
-                             handleMarkerClick(pointData);
-                        });
-                    }
-                });
-            }
-            finishTask();
-        });
-
-        async function finishTask() {
-            await new Promise(resolve => setTimeout(resolve, ROUTING_DELAY_MS));
-            isProcessingQueue = false;
-            processRoutingQueue(); 
-        }
+/**
+ * (ĐÃ SỬA LỖI REMOVELAYER) Xử lý hàng đợi định tuyến, từng bước một.
+ * @param {boolean} [shouldExport=true] - Có nên gọi exportGroupsData() sau khi hoàn thành không.
+ */
+async function processRoutingQueue(shouldExport = true) {
+    // 1. Kiểm tra trạng thái an toàn
+    if (isBirdMode) {
+        // Đảm bảo không còn tác vụ nào chạy khi ở chế độ chim bay
+        isProcessingQueue = false;
+        return;
     }
+
+    if (isProcessingQueue || routingQueue.length === 0) {
+        return;
+    }
+    
+    isProcessingQueue = true;
+    const task = routingQueue.shift(); 
+    
+    // === LẤY THAM SỐ ===
+    const { startLatLng, endLatLng, endMarker, pointData, color, groupNumber, group } = task;
+
+    if (!group || !pointData || !endMarker) {
+        console.error("Lỗi: Tác vụ định tuyến bị thiếu dữ liệu quan trọng.");
+        isProcessingQueue = false;
+        processRoutingQueue(shouldExport); 
+        return;
+    }
+    
+    const cacheKey = pointData.id;
+
+    // 2. Khởi tạo Routing Control
+    const router = L.Routing.control({
+        waypoints: [startLatLng, endLatLng],
+        show: false,
+        addWaypoints: false,
+        createMarker: () => null,
+        lineOptions: {
+            addWaypoints: false,
+            styles: [{ 
+                color: color, 
+                opacity: 1.0, 
+                weight: 5, 
+                dashArray: '10, 10',
+                className: 'animated-route-line' 
+            }]
+        } 
+    }).addTo(map);
+
+    // Lưu router vào mảng controls của nhóm
+    group.routingControls.push(router);
+    
+    // === HÀM KẾT THÚC AN TOÀN ===
+    const finishTask = async () => {
+        // Gỡ Router khỏi Map một cách an toàn
+        try { 
+            map.removeControl(router);
+            // Xóa router khỏi mảng quản lý của nhóm để tránh xóa lần nữa
+            const index = group.routingControls.indexOf(router);
+            if (index > -1) {
+                group.routingControls.splice(index, 1);
+            }
+        } catch (e) {
+            // console.warn("Lỗi an toàn khi removeControl:", e); // Gỡ lỗi
+        } 
+        
+        await new Promise(resolve => setTimeout(resolve, ROUTING_DELAY_MS));
+        isProcessingQueue = false;
+        processRoutingQueue(shouldExport);
+    };
+    // =============================
+
+
+    router.on('routesfound', function(e) {
+        // --- LƯU CACHE POLYLINE ---
+        const route = e.routes[0];
+        const coordinates = route.coordinates.map(c => ({ lat: c.lat, lon: c.lng }));
+        
+        group.polylineCache[cacheKey] = JSON.stringify(coordinates); 
+        
+        if (shouldExport) {
+            exportGroupsData(); 
+        }
+        // -------------------------
+        
+        // Cập nhật tooltip
+        const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
+        if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
+            const distanceInKm = (route.summary.totalDistance / 1000).toFixed(2); 
+            const tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ${distanceInKm} km (lái xe)`;
+            
+            endMarker.unbindTooltip(); 
+            
+            const newTooltip = endMarker.bindTooltip(tooltipContent, {
+                permanent: true, direction: 'top', className: 'distance-tooltip'
+            }).openTooltip();
+            
+            newTooltip.on('add', function() {
+                const container = this.getElement();
+                if (container) {
+                    container.style.borderColor = color;
+                    L.DomEvent.on(container, 'click', (e) => {
+                         L.DomEvent.stopPropagation(e);
+                         handleMarkerClick(pointData);
+                    });
+                }
+            });
+        }
+        
+        finishTask();
+    });
+
+    router.on('routingerror', function(e) {
+        console.error(`Lỗi định tuyến cho điểm ${pointData.id}:`, e.message);
+        showToast(`Lỗi định tuyến cho ${pointData.id}.`, "error");
+        
+        // Vẽ đường chim bay để thay thế
+        L.polyline([startLatLng, endLatLng], {
+            color: color, 
+            opacity: 0.5, 
+            weight: 3, 
+            dashArray: '5, 5'
+        }).addTo(analysisLayer);
+
+        finishTask();
+    });
+}
 
 
     /**
@@ -3523,32 +3837,40 @@ function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
             });
     }
     
-    /**
-     * (SỬA v38) Cập nhật style cho nút
-     */
-    function toggleBatteryView() {
-        isBatteryView = !isBatteryView;
-        const button = document.getElementById('battery-toggle-btn');
+ /**
+ * (SỬA LỚN) Bật/Tắt chế độ Pin và áp dụng bộ lọc hiển thị.
+ */
+function toggleBatteryView() {
+    isBatteryView = !isBatteryView;
+    const button = document.getElementById('battery-toggle-btn');
+    
+    if (isBatteryView) {
+        button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
+        button.classList.add('battery-mode');
+        button.classList.remove('pin-mode');
+        showToast("Đã BẬT: Chế độ Pin", 'info');
         
-        if (isBatteryView) {
-            button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
-            button.classList.add('battery-mode');
-            button.classList.remove('pin-mode');
-            showToast("Đã BẬT: Chế độ Pin", 'info');
-        } else {
-            button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
-            button.classList.add('pin-mode');
-            button.classList.remove('battery-mode');
-            showToast("Đã TẮT: Chế độ Pin", 'warning');
-        }
+        // YÊU CẦU MỚI: ẨN CÁC ĐƯỜNG PHÂN TÍCH (Vòng tròn Hub & Routing)
+        if (analysisLayer) analysisLayer.clearLayers();
+        if (measureLayer) measureLayer.clearLayers();
         
-        // Vẽ lại toàn bộ map để cập nhật icon
-        drawAllGroups();
-        // Xóa preview (nếu có) để cập nhật lại icon
-        clearPreview();
-        // (MỚI v39) Cập nhật Bảng Xếp Hạng (để ẩn nó đi)
-        updateRankTable();
+    } else {
+        button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
+        button.classList.add('pin-mode');
+        button.classList.remove('battery-mode');
+        showToast("Đã TẮT: Chế độ Pin", 'warning');
     }
+    
+    // (*** QUAN TRỌNG: Gọi hàm lọc mới để ẩn các chấm ghim ***)
+    updateMarkersVisibility(); 
+    // ----------------------------------------------------
+    
+    // Vẽ lại toàn bộ map để cập nhật icon (và vẽ lại layer analysis nếu Tắt Pin)
+    drawAllGroups();
+    clearPreview();
+    // (MỚI v39) Cập nhật Bảng Xếp Hạng (để ẩn nó đi khi bật Pin)
+    updateRankTable();
+}
     
     // *** Tự động gọi hàm tải dữ liệu sau khi map khởi tạo ***
     
