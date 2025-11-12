@@ -1378,58 +1378,58 @@ font-size: 11px; /* Chữ bé đi */
 
     <script>
 /**
- * Tự động tạo 20 nhóm (vòng tròn bán kính) dựa trên Top 20 điểm đề xuất trong Bảng xếp hạng.
- * Sử dụng đệ quy để xử lý bất đồng bộ, tránh làm treo trình duyệt.
+ * Tự động tạo nhóm (vòng tròn bán kính) dựa trên N điểm đề xuất TỐT NHẤT trong Bảng xếp hạng.
+ * @param {number} hubCount - Số lượng Hub tối đa cần tạo nhóm (hiện tại là 22).
  */
-function createTop20Groups() {
+function createTopHubGroups(hubCount = 22) {
     if (currentRankings.length === 0) {
         showToast("Không có điểm nào trong Bảng xếp hạng để tạo nhóm.", "error");
         return;
     }
 
-    const top20Candidates = currentRankings.slice(0, 20)
+    // Lấy HubCount (22) điểm xếp hạng tốt nhất
+    const topCandidates = currentRankings.slice(0, hubCount)
         .filter(r => r.type === 'NEW'); // Chỉ lấy các điểm đề xuất tạo nhóm MỚI
 
-    if (top20Candidates.length === 0) {
+    if (topCandidates.length === 0) {
         showToast("Không tìm thấy điểm Hub mới nào để tạo nhóm.", "warning");
         return;
     }
 
-    showToast(`Bắt đầu tạo ${top20Candidates.length} nhóm tự động...`, 'info');
+    showToast(`Bắt đầu tạo ${topCandidates.length} nhóm tự động (Top ${hubCount} Hubs)...`, 'info');
     
     // Khóa nút trong khi xử lý
-    document.getElementById('auto-group-btn').disabled = true;
+    const autoGroupBtn = document.getElementById('auto-group-btn');
+    if(autoGroupBtn) autoGroupBtn.disabled = true;
 
     // Sử dụng đệ quy để tạo nhóm lần lượt
     const processNextGroup = (index) => {
-        if (index >= top20Candidates.length) {
+        if (index >= topCandidates.length) {
             showToast("Đã tạo nhóm thành công cho tất cả các Hub.", 'success');
-            document.getElementById('auto-group-btn').disabled = false; // Mở lại nút
+            if(autoGroupBtn) autoGroupBtn.disabled = false; // Mở lại nút
             return;
         }
 
-        const item = top20Candidates[index];
+        const item = topCandidates[index];
         
         // 1. Tìm điểm tâm trong allPoints
         const centerPoint = allPoints.find(p => String(p.id) === String(item.centerId));
 
-        if (centerPoint && centerPoint.groupId === null) {
-            // 2. Gọi hàm tạo nhóm (Tương tự popup_createGroup)
+        // Kiểm tra điểm tâm có tồn tại, chưa được nhóm, và chưa bị xóa khỏi danh sách Hub
+        if (centerPoint && centerPoint.groupId === null && centerPoint.isHub) {
             // Lấy bán kính hiện tại từ thanh trượt
             const currentRadius = RADIUS_METERS;
             
-            // Xử lý tạo nhóm (Logic này nên được chuyển thành một hàm tiện ích không Popup)
+            // 2. Gọi hàm tạo nhóm thô (rawCreateGroup)
+            // rawCreateGroup đã được sửa lỗi chặn Hub làm vệ tinh ở bước trước.
+            const isCreated = rawCreateGroup(centerPoint, currentRadius, currentRadius / 1000);
             
-            // NOTE: Thay vì gọi popup_createGroup (sẽ gọi Toast và đóng Popup),
-            // chúng ta gọi logic tạo nhóm THÔ để tránh lỗi UI liên tục.
-            
-            // Gọi hàm tạo nhóm đã được sửa đổi để chấp nhận bán kính
-            if (rawCreateGroup(centerPoint, currentRadius, currentRadius / 1000)) {
-                 showToast(`Đang tạo nhóm: ${centerPoint.id} (${index + 1}/${top20Candidates.length})`, 'info');
+            if (isCreated) {
+                 showToast(`Đang tạo nhóm: ${centerPoint.id} (${index + 1}/${topCandidates.length})`, 'info');
             }
         }
         
-        // Chờ một chút trước khi gọi điểm tiếp theo
+        // Chờ một chút trước khi gọi điểm tiếp theo để tránh tắc nghẽn UI
         setTimeout(() => {
             processNextGroup(index + 1);
         }, 50); // Chờ 50ms cho mỗi nhóm
@@ -3588,10 +3588,12 @@ function removeProposal(pointId) {
                 // Thêm nút này bên trong buttonsWrapper trong MasterControls
 const autoGroupButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg btn-new', buttonsWrapper);
 autoGroupButton.id = 'auto-group-btn';
-autoGroupButton.innerHTML = '<i class="fa-solid fa-list-ol w-4 h-4"></i> <span class="button-text">Tạo Top 20 Hub</span>';
+// ✨ ĐỔI NỘI DUNG NÚT TẠI ĐÂY ✨
+autoGroupButton.innerHTML = '<i class="fa-solid fa-list-ol w-4 h-4"></i> <span class="button-text">Tạo Top 22 Hub</span>'; 
 autoGroupButton.onclick = (e) => {
     L.DomEvent.stopPropagation(e);
-    createTop20Groups(); // Gọi hàm tự động tạo nhóm
+    // ✨ ĐỔI TÊN HÀM (Nếu bạn dùng tên mới) HOẶC giữ nguyên tên cũ nếu bạn muốn. Tôi dùng tên mới để phản ánh tính năng linh hoạt.
+    createTopHubGroups(22); 
 };
                 // (*** MỚI v48 ***) Nút Tùy Chỉnh Map (Filter)
 
