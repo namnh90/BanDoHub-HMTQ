@@ -1439,6 +1439,7 @@ function createTop20Groups() {
 }
 /**
  * (MỚI) Hàm tiện ích tạo nhóm mà không tương tác với Popup/Toast.
+ * Đã sửa lỗi chặn HUB trở thành Vệ tinh.
  * @returns {boolean} True nếu nhóm được tạo.
  */
 function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
@@ -1448,9 +1449,15 @@ function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
     const coveredPoints = allPoints.filter(p => {
         if (p.id === centerPoint.id || p.nhnn) return false;
         if (p.groupId !== null && p.groupId !== 'REFERENCE') return false; 
+        
+        // ✨ SỬA LỖI: CHẶN ĐIỂM ĐƯỢC ĐÁNH DẤU LÀ HUB KHÔNG THỂ LÀ VỆ TINH ✨
+        if (p.isHub) return false;
+        
         const distance = centerPoint.latlng.distanceTo(p.latlng);
         return distance <= radiusMeters;
     });
+
+    if (coveredPoints.length === 0) return false; // Thêm check để tránh tạo nhóm rỗng
 
     const newGroupNumber = allGroups.length + 1;
     const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
@@ -1466,7 +1473,7 @@ function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
         groupNumber: newGroupNumber,
         routingControls: [],
         polylineCache: {},
-        fixedRadiusMeters: radiusMeters, // ✨ LƯU BÁN KÍNH CỐ ĐỊNH ✨
+        fixedRadiusMeters: radiusMeters,
         fixedRadiusKm: radiusKm
     };
     allGroups.push(newGroup);
@@ -1488,7 +1495,7 @@ function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
         pointIds: pointIdsInGroup 
     };
 
-    // Cập nhật giao diện sau khi tạo xong (gọi một lần sau khi loop kết thúc)
+    // Cập nhật giao diện sau khi tạo xong
     drawAllGroups();
     updateRankTable();
     updateFilterOptions();
@@ -5820,7 +5827,8 @@ autoGroupButton.onclick = (e) => {
 
         }
 /**
- * (FIX: Đảm bảo khởi tạo polylineCache khi tạo nhóm)
+ * (FIX LỖI KINH DOANH: CHẶN HUB LÀM VỆ TINH)
+ * Tạo nhóm mới thủ công, sử dụng bán kính linh hoạt hiện tại (RADIUS_METERS).
  */
 function popup_createGroup(pointId) {
     if (currentPopup) {
@@ -5832,32 +5840,45 @@ function popup_createGroup(pointId) {
         showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
         return;
     }
+    
     // Tìm các điểm CHƯA NHÓM nằm trong bán kính
     const coveredPoints = allPoints.filter(p => {
+        // 1. Loại bỏ điểm tâm và NHNN
         if (p.id === centerPoint.id || p.nhnn) return false;
+        
+        // 2. Loại bỏ các điểm đã có nhóm
         if (p.groupId !== null && p.groupId !== 'REFERENCE') return false;
+        
+        // ✨ ĐIỀU KIỆN SỬA LỖI: CHẶN ĐIỂM ĐƯỢC ĐÁNH DẤU LÀ HUB KHÔNG THỂ LÀ VỆ TINH ✨
+        if (p.isHub) return false; 
+
+        // 3. Kiểm tra khoảng cách (Sử dụng RADIUS_METERS từ thanh trượt)
         const distance = centerPoint.latlng.distanceTo(p.latlng);
         return distance <= RADIUS_METERS;
     });
+    
     const newGroupNumber = allGroups.length + 1;
     const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
     const newGroupId = `G_${newGroupNumber}`;
+    
     // Tạo mảng điểm, BẮT ĐẦU VỚI ĐIỂM TÂM
     const pointsInGroup = [centerPoint, ...coveredPoints];
+    
     const newGroup = {
         id: newGroupId,
         centerPoint: centerPoint,
-        // ✨ THÊM THUỘC TÍNH NÀY KHI LƯU NHÓM ✨
-        fixedRadiusMeters: RADIUS_METERS, // Lưu lại bán kính cố định
+        // ✨ LƯU BÁN KÍNH CỐ ĐỊNH (Giá trị từ thanh trượt) ✨
+        fixedRadiusMeters: RADIUS_METERS, 
         fixedRadiusKm: currentRadiusKm,
-        points: pointsInGroup, // <--- THÊM ĐIỂM TÂM VÀO MẢNG NÀY
+        points: pointsInGroup, 
         color: newGroupColor,
         groupNumber: newGroupNumber,
         routingControls: [],
         polylineCache: {}
     };
     allGroups.push(newGroup);
-    // CẬP NHẬT DỮ LIỆU ĐIỂM TRƯỚC KHI VẼ
+    
+    // CẬP NHẬT DỮ LIỆU ĐIỂM
     centerPoint.groupId = newGroupId;
     const coveredIds = new Set(coveredPoints.map(p => p.id));
     allPoints.forEach(p => {
@@ -5865,21 +5886,24 @@ function popup_createGroup(pointId) {
             p.groupId = newGroupId;
         }
     });
-    // ĐỒNG BỘ: Cập nhật biến groups (cho Popup Chuyển Nhóm)
-    const pointIdsInGroup = pointsInGroup.map(p => p.id); // Lấy tất cả ID (bao gồm tâm)
+    
+    // ĐỒNG BỘ: Cập nhật biến groups (cho UI Popup)
+    const pointIdsInGroup = pointsInGroup.map(p => p.id);
     groups[`NHÓM ${newGroupNumber}`] = {
         id: newGroupId,
         color: newGroupColor,
         pointIds: pointIdsInGroup
     };
+    
     // ==========================================================
     drawAllGroups();
     updateRankTable();
     updateFilterOptions();
+    
     // Fix Lỗi Zoom
     const message = (coveredPoints.length > 0)
         ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
-        : "Đã tạo Nhóm mới, nhưng không có điểm nào chưa nhóm trong bán kính 30km.";
+        : `Đã tạo Nhóm mới. Bán kính ${currentRadiusKm} km không bao phủ thêm điểm vệ tinh nào.`;
     Toastify({
         text: message,
         className: coveredPoints.length > 0 ? "custom-toast success" : "custom-toast warning",
