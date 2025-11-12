@@ -1378,8 +1378,9 @@ font-size: 11px; /* Chữ bé đi */
 
     <script>
 /**
- * Tự động tạo nhóm (vòng tròn bán kính) dựa trên N điểm đề xuất TỐT NHẤT trong Bảng xếp hạng.
- * @param {number} hubCount - Số lượng Hub tối đa cần tạo nhóm (hiện tại là 22).
+ * (SỬA LỖI MẤT LOG & KHẮC PHỤC) Tự động tạo nhóm (vòng tròn bán kính) dựa trên N điểm đề xuất TỐT NHẤT trong Bảng xếp hạng.
+ * Đã thêm logging chi tiết để chẩn đoán Hub bị bỏ qua.
+ * @param {number} hubCount - Số lượng Hub tối đa cần tạo nhóm (mặc định là 22).
  */
 function createTopHubGroups(hubCount = 22) {
     if (currentRankings.length === 0) {
@@ -1387,58 +1388,67 @@ function createTopHubGroups(hubCount = 22) {
         return;
     }
 
-    // Lấy HubCount (22) điểm xếp hạng tốt nhất
-    const topCandidates = currentRankings.slice(0, hubCount)
-        .filter(r => r.type === 'NEW'); // Chỉ lấy các điểm đề xuất tạo nhóm MỚI
+    // 1. Lấy danh sách ID Ứng viên từ Ranking
+    const topCandidatesIds = currentRankings.slice(0, hubCount)
+        .filter(r => r.type === 'NEW') // Chỉ lấy các đề xuất Hub mới
+        .map(r => r.centerId);
 
-    if (topCandidates.length === 0) {
+    if (topCandidatesIds.length === 0) {
         showToast("Không tìm thấy điểm Hub mới nào để tạo nhóm.", "warning");
         return;
     }
 
-    showToast(`Bắt đầu tạo ${topCandidates.length} nhóm tự động (Top ${hubCount} Hubs)...`, 'info');
+    showToast(`Bắt đầu tạo nhóm cho ${topCandidatesIds.length} Hub từ Top ${hubCount}...`, 'info');
     
-    // Khóa nút trong khi xử lý
     const autoGroupBtn = document.getElementById('auto-group-btn');
     if(autoGroupBtn) autoGroupBtn.disabled = true;
+    
+    let createdCount = 0;
 
-    // Sử dụng đệ quy để tạo nhóm lần lượt
+    // 2. Bắt đầu vòng lặp đệ quy trên danh sách ID ứng viên
     const processNextGroup = (index) => {
-        if (index >= topCandidates.length) {
-            showToast("Đã tạo nhóm thành công cho tất cả các Hub.", 'success');
-            if(autoGroupBtn) autoGroupBtn.disabled = false; // Mở lại nút
+        if (index >= topCandidatesIds.length) {
+            showToast(`Hoàn tất tạo nhóm. Tổng cộng ${createdCount} Hub đã được tạo.`, 'success');
+            if(autoGroupBtn) autoGroupBtn.disabled = false;
             return;
         }
 
-        const item = topCandidates[index];
-        
-        // 1. Tìm điểm tâm trong allPoints
-        const centerPoint = allPoints.find(p => String(p.id) === String(item.centerId));
+        const centerId = topCandidatesIds[index];
+        const centerPoint = allPoints.find(p => String(p.id) === centerId);
 
-        // Kiểm tra điểm tâm có tồn tại, chưa được nhóm, và chưa bị xóa khỏi danh sách Hub
-        if (centerPoint && centerPoint.groupId === null && centerPoint.isHub) {
-            // Lấy bán kính hiện tại từ thanh trượt
+        // --- 3. LOGIC CHẨN ĐOÁN LỖI (Quan trọng) ---
+        if (!centerPoint) {
+            console.error(`[HUB LOG] HUB ID ${centerId} không tìm thấy trong allPoints.`);
+            setTimeout(() => { processNextGroup(index + 1); }, 50);
+            return;
+        }
+        
+        if (!centerPoint.isHub) {
+            console.warn(`[HUB LOG] BỎ QUA ${centerId}: isHub = false (Không phải Hub).`);
+        } else if (centerPoint.groupId !== null) {
+            console.warn(`[HUB LOG] BỎ QUA ${centerId}: groupId = ${centerPoint.groupId} (Đã được nhóm).`);
+        } else {
+            // --- 4. TẠO NHÓM (Chỉ khi HỢP LỆ) ---
             const currentRadius = RADIUS_METERS;
             
-            // 2. Gọi hàm tạo nhóm thô (rawCreateGroup)
-            // rawCreateGroup đã được sửa lỗi chặn Hub làm vệ tinh ở bước trước.
             const isCreated = rawCreateGroup(centerPoint, currentRadius, currentRadius / 1000);
             
             if (isCreated) {
-                 showToast(`Đang tạo nhóm: ${centerPoint.id} (${index + 1}/${topCandidates.length})`, 'info');
+                 createdCount++;
+                 console.log(`[HUB LOG] ✅ TẠO THÀNH CÔNG: ${centerId} (${createdCount}/${topCandidatesIds.length})`);
             }
         }
         
-        // Chờ một chút trước khi gọi điểm tiếp theo để tránh tắc nghẽn UI
+        // Chờ 50ms cho mỗi nhóm
         setTimeout(() => {
             processNextGroup(index + 1);
-        }, 50); // Chờ 50ms cho mỗi nhóm
+        }, 50); 
     };
 
     processNextGroup(0);
 }
 /**
- * (MỚI) Hàm tiện ích tạo nhóm mà không tương tác với Popup/Toast.
+ * Hàm tiện ích tạo nhóm mà không tương tác với Popup/Toast.
  * Đã sửa lỗi chặn HUB trở thành Vệ tinh.
  * @returns {boolean} True nếu nhóm được tạo.
  */
@@ -1448,16 +1458,19 @@ function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
     // Tìm các điểm CHƯA NHÓM nằm trong bán kính
     const coveredPoints = allPoints.filter(p => {
         if (p.id === centerPoint.id || p.nhnn) return false;
+        // Chặn các điểm đã có nhóm (kể cả nhóm cũ)
         if (p.groupId !== null && p.groupId !== 'REFERENCE') return false; 
         
-        // ✨ SỬA LỖI: CHẶN ĐIỂM ĐƯỢC ĐÁNH DẤU LÀ HUB KHÔNG THỂ LÀ VỆ TINH ✨
-        if (p.isHub) return false;
-        
+        // ✨ SỬA LỖI TRỌNG YẾU: CHẶN ĐIỂM ĐƯỢC ĐÁNH DẤU LÀ HUB KHÔNG THỂ LÀ VỆ TINH ✨
+        if (p.isHub) return false; 
+
         const distance = centerPoint.latlng.distanceTo(p.latlng);
         return distance <= radiusMeters;
     });
 
-    if (coveredPoints.length === 0) return false; // Thêm check để tránh tạo nhóm rỗng
+    // Nếu không có vệ tinh, không tạo nhóm (tránh nhóm rỗng, nhưng vẫn tạo nếu chỉ có tâm)
+    // Nếu bạn muốn tạo nhóm ngay cả khi không có vệ tinh, hãy xóa dòng if này.
+    // if (coveredPoints.length === 0) return false; 
 
     const newGroupNumber = allGroups.length + 1;
     const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
@@ -4558,7 +4571,11 @@ autoGroupButton.onclick = (e) => {
         </select>
 
     </div>
-
+<div class="filter-control">
+    <label for="filter-pldgd">Lọc theo Loại Điểm (TSCN/PGD):</label>
+    <select id="filter-pldgd" multiple size="3">
+    </select>
+</div>
     <div class="filter-control">
 
         <label for="filter-vuothm">Lọc theo Hạn Mức:</label>
@@ -4661,337 +4678,218 @@ autoGroupButton.onclick = (e) => {
             setupMultiSelectToggle();
 
         }
-        /**
+ /**
+ * (SỬA LỚN MULTI-SELECT & THÊM FILTER PL_DGD) Cập nhật các dropdown phụ thuộc.
+ */
+function updateFilterOptions() {
+    const vungSelect = document.getElementById('filter-vung');
+    const chinhanhSelect = document.getElementById('filter-chinhanh');
+    const termidSelect = document.getElementById('filter-termid');
+    const vuothmSelect = document.getElementById('filter-vuothm');
+    const pldgdSelect = document.getElementById('filter-pldgd'); // ✨ MỚI
+    const nhomSelect = document.getElementById('filter-nhom'); 
     
-     * (SỬA LỚN MULTI-SELECT) Cập nhật cả 5 dropdown, loại bỏ tùy chọn 'ALL', và thêm tùy chọn nhóm chi tiết.
+    if (!vungSelect || !chinhanhSelect || !termidSelect || !vuothmSelect || !pldgdSelect || !nhomSelect) return; 
+
+    const getSelectedValues = (selectElement) => {
+        if (!selectElement) return [];
+        return Array.from(selectElement.options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+    };
+
+    // Lấy các giá trị đã chọn hiện tại (đã là mảng)
+    const selectedVung = getSelectedValues(vungSelect);
+    const selectedChiNhanh = getSelectedValues(chinhanhSelect);
+    const selectedTermid = getSelectedValues(termidSelect);
+    const selectedVuotHM = getSelectedValues(vuothmSelect);
+    const selectedPLDGD = getSelectedValues(pldgdSelect); // ✨ MỚI
+    const selectedNhom = getSelectedValues(nhomSelect);
+
+    let pointsToFilter = allPoints.filter(p => !p.nhnn);
+
+    // [Logic cập nhật Vùng, Chi Nhánh, TERMID, Hạn Mức (Giữ nguyên)]
+    // ... (logic Vung, Chi Nhánh, TermID) ...
+
+    // 1. Cập nhật Vùng
+    vungSelect.innerHTML = '';
+    const vungSet = new Set(pointsToFilter.map(p => p.vung));
+    vungSet.forEach(vung => { vungSelect.innerHTML += `<option value="${vung}">${vung}</option>`; });
+    if (selectedVung.length > 0) { pointsToFilter = pointsToFilter.filter(p => selectedVung.includes(p.vung)); }
+
+    // 2. Cập nhật Chi Nhánh
+    chinhanhSelect.innerHTML = '';
+    const chinhanhSet = new Set(pointsToFilter.map(p => p.chinhanh));
+    chinhanhSet.forEach(cn => { chinhanhSelect.innerHTML += `<option value="${cn}">${cn}</option>`; });
+    if (selectedChiNhanh.length > 0) { pointsToFilter = pointsToFilter.filter(p => selectedChiNhanh.includes(p.chinhanh)); }
+
+    // 3. Cập nhật TERMID
+    termidSelect.innerHTML = '';
+    const termidSet = new Set(pointsToFilter.map(p => String(p.id)));
+    const sortedTermids = [...termidSet].sort((a, b) => String(a).localeCompare(String(b)));
+    sortedTermids.forEach(id => { termidSelect.innerHTML += `<option value="${id}">${id}</option>`; });
+    if (selectedTermid.length > 0) { pointsToFilter = pointsToFilter.filter(p => selectedTermid.includes(String(p.id))); }
+
+    // 4. Cập nhật Hạn Mức
+    vuothmSelect.innerHTML = '';
+    const vuotHMSet = new Set(pointsToFilter.map(p => p.vuotHanMuc));
+    vuothmSelect.innerHTML += '<option value="ALL_HM" selected>-- Tất cả Hạn Mức --</option>';
+    if (vuotHMSet.has(true)) { vuothmSelect.innerHTML += '<option value="YES">Vượt Hạn Mức</option>'; }
+    if (vuotHMSet.has(false)) { vuothmSelect.innerHTML += '<option value="NO">Không Vượt</option>'; }
+    if (selectedVuotHM.length > 0 && !selectedVuotHM.includes('ALL_HM')) {
+        pointsToFilter = pointsToFilter.filter(p => selectedVuotHM.some(filterValue => {
+            if (filterValue === 'YES') return p.vuotHanMuc === true;
+            if (filterValue === 'NO') return p.vuotHanMuc === false;
+            return false;
+        }));
+    }
+
+    // ✨ 5. Cập nhật PL_DGD (TSCN/PGD/ATM) ✨
+    pldgdSelect.innerHTML = '';
+    const pldgdSet = new Set(pointsToFilter.map(p => p.isBatteryPoint));
+    pldgdSelect.innerHTML += '<option value="ALL_PLDGD" selected>-- Tất cả Loại Điểm --</option>';
+    if (pldgdSet.has(true)) {
+        pldgdSelect.innerHTML += '<option value="TSCN">Chỉ TSCN</option>';
+    }
+    if (pldgdSet.has(false)) {
+        pldgdSelect.innerHTML += '<option value="PGD_ATM">Chỉ PGD/ATM</option>';
+    }
+    // Áp dụng lọc PL_DGD cho bước tiếp theo
+    if (selectedPLDGD.length > 0 && !selectedPLDGD.includes('ALL_PLDGD')) {
+        pointsToFilter = pointsToFilter.filter(p => selectedPLDGD.some(filterValue => {
+            if (filterValue === 'TSCN') return p.isBatteryPoint === true;
+            if (filterValue === 'PGD_ATM') return p.isBatteryPoint === false;
+            return false;
+        }));
+    }
+
+
+    // 6. Cập nhật Nhóm
+    nhomSelect.innerHTML = '';
+    const nhomSet = new Set(pointsToFilter.map(p => p.groupId));
+    nhomSelect.innerHTML += '<option value="ALL" selected>-- Tất cả --</option>'; 
     
-     */
+    if (allGroups.length > 0) {
+        nhomSelect.innerHTML += '<option value="ALL_GROUPED">-- TẤT CẢ NHÓM --</option>';
+    }
+    if (nhomSet.has(null)) {
+         nhomSelect.innerHTML += '<option value="NULL">[CHƯA CÓ NHÓM]</option>';
+    }
+    allGroups.forEach(group => {
+         if (nhomSet.has(group.id)) { 
+             nhomSelect.innerHTML += `<option value="${group.id}">Nhóm ${group.groupNumber}</option>`;
+         }
+    });
 
-        function updateFilterOptions() {
 
-            const vungSelect = document.getElementById('filter-vung');
+    // --- Khôi phục các lựa chọn đã chọn (Quan trọng) ---
+    [...vungSelect.options].forEach(opt => opt.selected = selectedVung.includes(opt.value));
+    [...chinhanhSelect.options].forEach(opt => opt.selected = selectedChiNhanh.includes(opt.value));
+    [...termidSelect.options].forEach(opt => opt.selected = selectedTermid.includes(opt.value));
+    [...vuothmSelect.options].forEach(opt => opt.selected = selectedVuotHM.includes(opt.value));
+    [...pldgdSelect.options].forEach(opt => opt.selected = selectedPLDGD.includes(opt.value)); // ✨ MỚI
+    [...nhomSelect.options].forEach(opt => opt.selected = selectedNhom.includes(opt.value));
 
-            const chinhanhSelect = document.getElementById('filter-chinhanh');
+    // Gắn sự kiện `change` cho dropdown PL_DGD
+    pldgdSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
+}
 
-            const termidSelect = document.getElementById('filter-termid');
+/**
+ * (SỬA LỚN MULTI-SELECT & PL_DGD) Áp dụng các bộ lọc theo chế độ Multi-Select.
+ */
+function applyFilter() {
+    const selVung = document.getElementById('filter-vung');
+    const selChiNhanh = document.getElementById('filter-chinhanh');
+    const selTermid = document.getElementById('filter-termid');
+    const selVuotHM = document.getElementById('filter-vuothm');
+    const selPLDGD = document.getElementById('filter-pldgd'); // ✨ MỚI
+    const selNhom = document.getElementById('filter-nhom');
 
-            const vuothmSelect = document.getElementById('filter-vuothm');
+    // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
+    const getSelectedValues = (selectElement) => {
+        if (!selectElement) return ['ALL']; 
+        const selected = Array.from(selectElement.options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+        // Nếu không chọn gì VÀ không chọn tùy chọn 'ALL', coi như đã chọn 'ALL'
+        return selected.length > 0 ? selected : ['ALL']; 
+    };
 
-            const nhomSelect = document.getElementById('filter-nhom');
-            if (!vungSelect || !chinhanhSelect || !termidSelect || !vuothmSelect || !nhomSelect) return;
-            // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
+    // Lấy các giá trị đã chọn
+    const selectedVung = getSelectedValues(selVung);
+    const selectedChiNhanh = getSelectedValues(selChiNhanh);
+    const selectedTermid = getSelectedValues(selTermid);
+    const selectedVuotHM = getSelectedValues(selVuotHM);
+    const selectedPLDGD = getSelectedValues(selPLDGD); // ✨ MỚI
+    const selectedNhom = getSelectedValues(selNhom);
 
-            const getSelectedValues = (selectElement) => {
+    allPoints.forEach(p => {
+        
+        // 1. Lọc Vùng/Chi Nhánh/TermID (Match: thuộc tính điểm NẰM TRONG mảng đã chọn)
+        const vungMatch = selectedVung.includes('ALL') || selectedVung.includes(p.vung);
+        const chiNhanhMatch = selectedChiNhanh.includes('ALL') || selectedChiNhanh.includes(p.chinhanh);
+        const termidMatch = selectedTermid.includes('ALL') || selectedTermid.includes(String(p.id));
 
-                if (!selectElement) return [];
-
-                return Array.from(selectElement.options)
-
-                    .filter(option => option.selected)
-
-                    .map(option => option.value);
-
-            };
-            // Lấy các giá trị đã chọn hiện tại (đã là mảng)
-
-            const selectedVung = getSelectedValues(vungSelect);
-
-            const selectedChiNhanh = getSelectedValues(chinhanhSelect);
-
-            const selectedTermid = getSelectedValues(termidSelect);
-
-            const selectedVuotHM = getSelectedValues(vuothmSelect);
-
-            const selectedNhom = getSelectedValues(nhomSelect);
-            // Dùng một tập hợp điểm đang hiển thị (theo logic cũ) để xây dựng option cho dropdown tiếp theo
-
-            let pointsToFilter = allPoints.filter(p => !p.nhnn);
-            // 1. Cập nhật Vùng
-
-            vungSelect.innerHTML = '';
-
-            const vungSet = new Set(pointsToFilter.map(p => p.vung));
-
-            vungSet.forEach(vung => {
-
-                vungSelect.innerHTML += `<option value="${vung}">${vung}</option>`;
-
+        // 2. Lọc Hạn Mức
+        let vuotHMMatch = selectedVuotHM.includes('ALL'); 
+        if (!vuotHMMatch && !p.nhnn) {
+            vuotHMMatch = selectedVuotHM.some(filterValue => {
+                if (filterValue === 'YES') return p.vuotHanMuc === true;
+                if (filterValue === 'NO') return p.vuotHanMuc === false;
+                return false;
             });
-
-            // Áp dụng lọc Vùng cho bước tiếp theo
-
-            if (selectedVung.length > 0) {
-
-                pointsToFilter = pointsToFilter.filter(p => selectedVung.includes(p.vung));
-
-            }
-
-
-            // 2. Cập nhật Chi Nhánh
-
-            chinhanhSelect.innerHTML = '';
-
-            const chinhanhSet = new Set(pointsToFilter.map(p => p.chinhanh));
-
-            chinhanhSet.forEach(cn => {
-
-                chinhanhSelect.innerHTML += `<option value="${cn}">${cn}</option>`;
-
+        }
+        
+        // ✨ 3. Lọc PL_DGD (TSCN/PGD/ATM) ✨
+        let pldgdMatch = selectedPLDGD.includes('ALL_PLDGD'); 
+        if (!pldgdMatch && !p.nhnn) {
+            pldgdMatch = selectedPLDGD.some(filterValue => {
+                if (filterValue === 'TSCN') return p.isBatteryPoint === true;
+                if (filterValue === 'PGD_ATM') return p.isBatteryPoint === false;
+                return false;
             });
-
-            // Áp dụng lọc Chi Nhánh cho bước tiếp theo
-
-            if (selectedChiNhanh.length > 0) {
-
-                pointsToFilter = pointsToFilter.filter(p => selectedChiNhanh.includes(p.chinhanh));
-
-            }
-
-
-            // 3. Cập nhật TERMID
-
-            termidSelect.innerHTML = '';
-
-            const termidSet = new Set(pointsToFilter.map(p => String(p.id)));
-
-            const sortedTermids = [...termidSet].sort((a, b) => String(a).localeCompare(String(b)));
-
-            sortedTermids.forEach(id => {
-
-                termidSelect.innerHTML += `<option value="${id}">${id}</option>`;
-
-            });
-
-            // Áp dụng lọc TermID cho bước tiếp theo
-
-            if (selectedTermid.length > 0) {
-
-                pointsToFilter = pointsToFilter.filter(p => selectedTermid.includes(String(p.id)));
-
-            }
-
-
-            // 4. Cập nhật Hạn Mức
-
-            vuothmSelect.innerHTML = '';
-
-            const vuotHMSet = new Set(pointsToFilter.map(p => p.vuotHanMuc));
-
-            vuothmSelect.innerHTML += '<option value="ALL_HM" selected>-- Tất cả Hạn Mức --</option>'; // Tùy chọn mặc định
-
-            if (vuotHMSet.has(true)) {
-
-                vuothmSelect.innerHTML += '<option value="YES">Vượt Hạn Mức</option>';
-
-            }
-
-            if (vuotHMSet.has(false)) {
-
-                vuothmSelect.innerHTML += '<option value="NO">Không Vượt</option>';
-
-            }
-
-            // Áp dụng lọc Hạn Mức cho bước tiếp theo
-
-            if (selectedVuotHM.length > 0 && !selectedVuotHM.includes('ALL_HM')) {
-
-                pointsToFilter = pointsToFilter.filter(p => selectedVuotHM.some(filterValue => {
-
-                    if (filterValue === 'YES') return p.vuotHanMuc === true;
-
-                    if (filterValue === 'NO') return p.vuotHanMuc === false;
-
-                    return false;
-
-                }));
-
-            }
-
-
-            // 5. Cập nhật Nhóm (SỬA LỚN)
-
-            nhomSelect.innerHTML = '';
-
-            const nhomSet = new Set(pointsToFilter.map(p => p.groupId));
-            // Tùy chọn mặc định: TẤT CẢ (Sửa tên từ ALL_POINTS thành ALL)
-
-            nhomSelect.innerHTML += '<option value="ALL" selected>-- Tất cả --</option>';
-            // Tùy chọn mới: TẤT CẢ NHÓM ĐÃ XÁC ĐỊNH (ALL_GROUPED)
-
-            if (allGroups.length > 0) {
-
-                nhomSelect.innerHTML += '<option value="ALL_GROUPED">-- TẤT CẢ NHÓM --</option>';
-
-            }
-            // Thêm lựa chọn [CHƯA CÓ NHÓM]
-
-            if (nhomSet.has(null)) {
-
-                nhomSelect.innerHTML += '<option value="NULL">[CHƯA CÓ NHÓM]</option>';
-
-            }
-            // Thêm các nhóm đã tạo (Nhóm 1, Nhóm 2,...)
-
-            allGroups.forEach(group => {
-
-                if (nhomSet.has(group.id)) {
-
-                    nhomSelect.innerHTML += `<option value="${group.id}">Nhóm ${group.groupNumber}</option>`;
-
-                }
-
-            });
-            // --- Khôi phục các lựa chọn đã chọn (Quan trọng) ---
-
-            [...vungSelect.options].forEach(opt => opt.selected = selectedVung.includes(opt.value));
-
-            [...chinhanhSelect.options].forEach(opt => opt.selected = selectedChiNhanh.includes(opt.value));
-
-            [...termidSelect.options].forEach(opt => opt.selected = selectedTermid.includes(opt.value));
-
-            [...vuothmSelect.options].forEach(opt => opt.selected = selectedVuotHM.includes(opt.value));
-
-            [...nhomSelect.options].forEach(opt => opt.selected = selectedNhom.includes(opt.value));
-
         }
 
-        /**
-        
-         * (SỬA LỚN MULTI-SELECT) Áp dụng các bộ lọc theo chế độ Multi-Select.
-        
-         */
-
-        function applyFilter() {
-
-            const selVung = document.getElementById('filter-vung');
-
-            const selChiNhanh = document.getElementById('filter-chinhanh');
-
-            const selTermid = document.getElementById('filter-termid');
-
-            const selVuotHM = document.getElementById('filter-vuothm');
-
-            const selNhom = document.getElementById('filter-nhom');
-            // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
-
-            const getSelectedValues = (selectElement) => {
-
-                if (!selectElement) return ['ALL']; // Mặc định là ALL nếu không tồn tại
-
-                const selected = Array.from(selectElement.options)
-
-                    .filter(option => option.selected)
-
-                    .map(option => option.value);
-
-                return selected.length > 0 ? selected : ['ALL']; // Nếu không chọn gì, coi như chọn ALL
-
-            };
-            // Lấy các giá trị đã chọn
-
-            const selectedVung = getSelectedValues(selVung);
-
-            const selectedChiNhanh = getSelectedValues(selChiNhanh);
-
-            const selectedTermid = getSelectedValues(selTermid);
-
-            const selectedVuotHM = getSelectedValues(selVuotHM);
-
-            const selectedNhom = getSelectedValues(selNhom);
-            allPoints.forEach(p => {
-                // 1. Lọc Vùng/Chi Nhánh/TermID (Match: thuộc tính điểm NẰM TRONG mảng đã chọn)
-
-                const vungMatch = selectedVung.includes('ALL') || selectedVung.includes(p.vung);
-
-                const chiNhanhMatch = selectedChiNhanh.includes('ALL') || selectedChiNhanh.includes(p.chinhanh);
-
-                const termidMatch = selectedTermid.includes('ALL') || selectedTermid.includes(String(p.id));
-                // 2. Lọc Hạn Mức
-
-                let vuotHMMatch = selectedVuotHM.includes('ALL');
-
-                if (!vuotHMMatch && !p.nhnn) {
-
-                    vuotHMMatch = selectedVuotHM.some(filterValue => {
-
-                        if (filterValue === 'YES') return p.vuotHanMuc === true;
-
-                        if (filterValue === 'NO') return p.vuotHanMuc === false;
-
-                        return false;
-
-                    });
-
+        // 4. Lọc Nhóm
+        let nhomMatch = selectedNhom.includes('ALL'); 
+        if (!nhomMatch) {
+            if (selectedNhom.includes("ALL_GROUPED")) {
+                nhomMatch = (p.groupId !== null && p.groupId !== 'REFERENCE');
+            } else if (selectedNhom.includes("NULL")) {
+                nhomMatch = (p.groupId === null); 
+            } else {
+                if (p.nhnn) {
+                    nhomMatch = false; 
+                } else {
+                    nhomMatch = selectedNhom.includes(String(p.groupId));
                 }
-                // 3. Lọc Nhóm (SỬA LỚN LOGIC)
-
-                let nhomMatch = selectedNhom.includes('ALL'); // Mặc định khớp nếu chọn 'ALL'
-                if (!nhomMatch) {
-
-                    if (selectedNhom.includes("ALL_GROUPED")) {
-
-                        // Tùy chọn ALL_GROUPED: chỉ hiển thị điểm có Group ID (không phải NHNN)
-
-                        nhomMatch = (p.groupId !== null && p.groupId !== 'REFERENCE');
-
-                    } else if (selectedNhom.includes("NULL")) {
-
-                        // Chỉ hiển thị điểm chưa có nhóm
-
-                        nhomMatch = (p.groupId === null);
-
-                    } else {
-
-                        // Hiển thị các nhóm cụ thể được chọn
-
-                        if (p.nhnn) {
-
-                            nhomMatch = false; // Ẩn NHNN nếu chọn nhóm cụ thể
-
-                        } else {
-
-                            nhomMatch = selectedNhom.includes(String(p.groupId));
-
-                        }
-
-                    }
-
-                }
-                // 4. Lọc Nút Ẩn/Hiện NHNN
-
-                let nhnnToggleMatch = true;
-
-                if (p.nhnn && !showNhnnMarkers) {
-
-                    nhnnToggleMatch = false;
-
-                }
-                // Final check: Tất cả điều kiện phải đúng
-
-                p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && nhomMatch && nhnnToggleMatch;
-
-            });
-            if (currentPopup) {
-
-                map.closePopup(currentPopup);
-
-                currentPopup = null;
-
             }
-            updateMarkersVisibility();
-
-            drawAllGroups();
-
-            updateRankTable();
-            // Đồng bộ nhãn Term ID
-
-            if (typeof toggleTermIDLabels === 'function' && showTermIDLabels) {
-
-                toggleTermIDLabels(); // Gọi lại để áp dụng p.isVisible mới
-
-            }
-
         }
+        
+        // 5. Lọc Nút Ẩn/Hiện NHNN
+        let nhnnToggleMatch = true;
+        if (p.nhnn && !showNhnnMarkers) {
+             nhnnToggleMatch = false;
+        }
+
+        // Final check: Tất cả điều kiện phải đúng
+        p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && pldgdMatch && nhomMatch && nhnnToggleMatch;
+    });
+    
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
+    }
+    
+    updateMarkersVisibility(); 
+    drawAllGroups(); 
+    updateRankTable(); 
+    
+    // Đồng bộ nhãn Term ID
+    if (typeof toggleTermIDLabels === 'function' && showTermIDLabels) {
+        toggleTermIDLabels(); 
+    }
+}
 
         /**
        
@@ -5845,16 +5743,12 @@ function popup_createGroup(pointId) {
     
     // Tìm các điểm CHƯA NHÓM nằm trong bán kính
     const coveredPoints = allPoints.filter(p => {
-        // 1. Loại bỏ điểm tâm và NHNN
         if (p.id === centerPoint.id || p.nhnn) return false;
-        
-        // 2. Loại bỏ các điểm đã có nhóm
         if (p.groupId !== null && p.groupId !== 'REFERENCE') return false;
         
         // ✨ ĐIỀU KIỆN SỬA LỖI: CHẶN ĐIỂM ĐƯỢC ĐÁNH DẤU LÀ HUB KHÔNG THỂ LÀ VỆ TINH ✨
         if (p.isHub) return false; 
 
-        // 3. Kiểm tra khoảng cách (Sử dụng RADIUS_METERS từ thanh trượt)
         const distance = centerPoint.latlng.distanceTo(p.latlng);
         return distance <= RADIUS_METERS;
     });
@@ -5863,13 +5757,11 @@ function popup_createGroup(pointId) {
     const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
     const newGroupId = `G_${newGroupNumber}`;
     
-    // Tạo mảng điểm, BẮT ĐẦU VỚI ĐIỂM TÂM
     const pointsInGroup = [centerPoint, ...coveredPoints];
     
     const newGroup = {
         id: newGroupId,
         centerPoint: centerPoint,
-        // ✨ LƯU BÁN KÍNH CỐ ĐỊNH (Giá trị từ thanh trượt) ✨
         fixedRadiusMeters: RADIUS_METERS, 
         fixedRadiusKm: currentRadiusKm,
         points: pointsInGroup, 
@@ -5880,7 +5772,6 @@ function popup_createGroup(pointId) {
     };
     allGroups.push(newGroup);
     
-    // CẬP NHẬT DỮ LIỆU ĐIỂM
     centerPoint.groupId = newGroupId;
     const coveredIds = new Set(coveredPoints.map(p => p.id));
     allPoints.forEach(p => {
@@ -5889,7 +5780,6 @@ function popup_createGroup(pointId) {
         }
     });
     
-    // ĐỒNG BỘ: Cập nhật biến groups (cho UI Popup)
     const pointIdsInGroup = pointsInGroup.map(p => p.id);
     groups[`NHÓM ${newGroupNumber}`] = {
         id: newGroupId,
@@ -5897,12 +5787,10 @@ function popup_createGroup(pointId) {
         pointIds: pointIdsInGroup
     };
     
-    // ==========================================================
     drawAllGroups();
     updateRankTable();
     updateFilterOptions();
     
-    // Fix Lỗi Zoom
     const message = (coveredPoints.length > 0)
         ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
         : `Đã tạo Nhóm mới. Bán kính ${currentRadiusKm} km không bao phủ thêm điểm vệ tinh nào.`;
