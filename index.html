@@ -1377,7 +1377,124 @@ font-size: 11px; /* Chữ bé đi */
 
 
     <script>
+/**
+ * Tự động tạo 20 nhóm (vòng tròn bán kính) dựa trên Top 20 điểm đề xuất trong Bảng xếp hạng.
+ * Sử dụng đệ quy để xử lý bất đồng bộ, tránh làm treo trình duyệt.
+ */
+function createTop20Groups() {
+    if (currentRankings.length === 0) {
+        showToast("Không có điểm nào trong Bảng xếp hạng để tạo nhóm.", "error");
+        return;
+    }
 
+    const top20Candidates = currentRankings.slice(0, 20)
+        .filter(r => r.type === 'NEW'); // Chỉ lấy các điểm đề xuất tạo nhóm MỚI
+
+    if (top20Candidates.length === 0) {
+        showToast("Không tìm thấy điểm Hub mới nào để tạo nhóm.", "warning");
+        return;
+    }
+
+    showToast(`Bắt đầu tạo ${top20Candidates.length} nhóm tự động...`, 'info');
+    
+    // Khóa nút trong khi xử lý
+    document.getElementById('auto-group-btn').disabled = true;
+
+    // Sử dụng đệ quy để tạo nhóm lần lượt
+    const processNextGroup = (index) => {
+        if (index >= top20Candidates.length) {
+            showToast("Đã tạo nhóm thành công cho tất cả các Hub.", 'success');
+            document.getElementById('auto-group-btn').disabled = false; // Mở lại nút
+            return;
+        }
+
+        const item = top20Candidates[index];
+        
+        // 1. Tìm điểm tâm trong allPoints
+        const centerPoint = allPoints.find(p => String(p.id) === String(item.centerId));
+
+        if (centerPoint && centerPoint.groupId === null) {
+            // 2. Gọi hàm tạo nhóm (Tương tự popup_createGroup)
+            // Lấy bán kính hiện tại từ thanh trượt
+            const currentRadius = RADIUS_METERS;
+            
+            // Xử lý tạo nhóm (Logic này nên được chuyển thành một hàm tiện ích không Popup)
+            
+            // NOTE: Thay vì gọi popup_createGroup (sẽ gọi Toast và đóng Popup),
+            // chúng ta gọi logic tạo nhóm THÔ để tránh lỗi UI liên tục.
+            
+            // Gọi hàm tạo nhóm đã được sửa đổi để chấp nhận bán kính
+            if (rawCreateGroup(centerPoint, currentRadius, currentRadius / 1000)) {
+                 showToast(`Đang tạo nhóm: ${centerPoint.id} (${index + 1}/${top20Candidates.length})`, 'info');
+            }
+        }
+        
+        // Chờ một chút trước khi gọi điểm tiếp theo
+        setTimeout(() => {
+            processNextGroup(index + 1);
+        }, 50); // Chờ 50ms cho mỗi nhóm
+    };
+
+    processNextGroup(0);
+}
+/**
+ * (MỚI) Hàm tiện ích tạo nhóm mà không tương tác với Popup/Toast.
+ * @returns {boolean} True nếu nhóm được tạo.
+ */
+function rawCreateGroup(centerPoint, radiusMeters, radiusKm) {
+    if (centerPoint.groupId !== null) return false;
+    
+    // Tìm các điểm CHƯA NHÓM nằm trong bán kính
+    const coveredPoints = allPoints.filter(p => {
+        if (p.id === centerPoint.id || p.nhnn) return false;
+        if (p.groupId !== null && p.groupId !== 'REFERENCE') return false; 
+        const distance = centerPoint.latlng.distanceTo(p.latlng);
+        return distance <= radiusMeters;
+    });
+
+    const newGroupNumber = allGroups.length + 1;
+    const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
+    const newGroupId = `G_${newGroupNumber}`; 
+    
+    const pointsInGroup = [centerPoint, ...coveredPoints];
+
+    const newGroup = {
+        id: newGroupId, 
+        centerPoint: centerPoint,
+        points: pointsInGroup, 
+        color: newGroupColor,
+        groupNumber: newGroupNumber,
+        routingControls: [],
+        polylineCache: {},
+        fixedRadiusMeters: radiusMeters, // ✨ LƯU BÁN KÍNH CỐ ĐỊNH ✨
+        fixedRadiusKm: radiusKm
+    };
+    allGroups.push(newGroup);
+
+    // CẬP NHẬT DỮ LIỆU ĐIỂM
+    centerPoint.groupId = newGroupId; 
+    const coveredIds = new Set(coveredPoints.map(p => p.id));
+    allPoints.forEach(p => {
+        if (coveredIds.has(p.id)) {
+            p.groupId = newGroupId; 
+        }
+    });
+
+    // ĐỒNG BỘ biến groups (cho UI Popup)
+    const pointIdsInGroup = pointsInGroup.map(p => p.id);
+    groups[`NHÓM ${newGroupNumber}`] = { 
+        id: newGroupId, 
+        color: newGroupColor, 
+        pointIds: pointIdsInGroup 
+    };
+
+    // Cập nhật giao diện sau khi tạo xong (gọi một lần sau khi loop kết thúc)
+    drawAllGroups();
+    updateRankTable();
+    updateFilterOptions();
+    
+    return true;
+}
         function clearOptimizationVisuals() {
 
             // Gọi hàm clearPreview để xóa vòng tròn preview/tooltip
@@ -3439,6 +3556,8 @@ function removeProposal(pointId) {
                     L.DomUtil.removeClass(container, 'expanded');
 
                 };
+
+                
                 // (*** MỚI v48 ***) Nút Bảng Xếp Hạng (Toggle)
 
                 const rankButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
@@ -3458,6 +3577,15 @@ function removeProposal(pointId) {
                 };
 
                 rankButton.style.display = 'none';
+
+                // Thêm nút này bên trong buttonsWrapper trong MasterControls
+const autoGroupButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg btn-new', buttonsWrapper);
+autoGroupButton.id = 'auto-group-btn';
+autoGroupButton.innerHTML = '<i class="fa-solid fa-list-ol w-4 h-4"></i> <span class="button-text">Tạo Top 20 Hub</span>';
+autoGroupButton.onclick = (e) => {
+    L.DomEvent.stopPropagation(e);
+    createTop20Groups(); // Gọi hàm tự động tạo nhóm
+};
                 // (*** MỚI v48 ***) Nút Tùy Chỉnh Map (Filter)
 
                 const filterButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
@@ -5691,123 +5819,72 @@ function removeProposal(pointId) {
             });
 
         }
-        /**
-        
-         * (FIX: Đảm bảo khởi tạo polylineCache khi tạo nhóm)
-        
-         */
-
-        function popup_createGroup(pointId) {
-
-            if (currentPopup) {
-
-                map.closePopup(currentPopup);
-
-                currentPopup = null;
-
-            }
-
-            const centerPoint = allPoints.find(p => String(p.id) === String(pointId));
-            if (!centerPoint) {
-
-                showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
-
-                return;
-
-            }
-            // Tìm các điểm CHƯA NHÓM nằm trong bán kính 30km
-
-            const coveredPoints = allPoints.filter(p => {
-
-                if (p.id === centerPoint.id || p.nhnn) return false;
-                if (p.groupId !== null && p.groupId !== 'REFERENCE') return false;
-                const distance = centerPoint.latlng.distanceTo(p.latlng);
-
-                return distance <= RADIUS_METERS;
-
-            });
-            const newGroupNumber = allGroups.length + 1;
-
-            const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
-            const newGroupId = `G_${newGroupNumber}`;
-            // Tạo mảng điểm, BẮT ĐẦU VỚI ĐIỂM TÂM
-
-            const pointsInGroup = [centerPoint, ...coveredPoints];
-            const newGroup = {
-
-                id: newGroupId,
-
-                centerPoint: centerPoint,
-
-                // ✨ THÊM THUỘC TÍNH NÀY KHI LƯU NHÓM ✨
-
-                fixedRadiusMeters: RADIUS_METERS, // Lưu lại bán kính cố định
-
-                fixedRadiusKm: currentRadiusKm,
-
-                points: pointsInGroup, // <--- THÊM ĐIỂM TÂM VÀO MẢNG NÀY
-
-                color: newGroupColor,
-
-                groupNumber: newGroupNumber,
-
-                routingControls: [],
-
-                polylineCache: {}
-
-            };
-
-            allGroups.push(newGroup);
-            // CẬP NHẬT DỮ LIỆU ĐIỂM TRƯỚC KHI VẼ
-
-            centerPoint.groupId = newGroupId;
-            const coveredIds = new Set(coveredPoints.map(p => p.id));
-
-            allPoints.forEach(p => {
-
-                if (coveredIds.has(p.id)) {
-
-                    p.groupId = newGroupId;
-
-                }
-
-            });
-            // ĐỒNG BỘ: Cập nhật biến groups (cho Popup Chuyển Nhóm)
-
-            const pointIdsInGroup = pointsInGroup.map(p => p.id); // Lấy tất cả ID (bao gồm tâm)
-            groups[`NHÓM ${newGroupNumber}`] = {
-
-                id: newGroupId,
-
-                color: newGroupColor,
-
-                pointIds: pointIdsInGroup
-
-            };
-
-            // ==========================================================
-            drawAllGroups();
-
-            updateRankTable();
-
-            updateFilterOptions();
-            // Fix Lỗi Zoom
-
-
-            const message = (coveredPoints.length > 0)
-
-                ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
-
-                : "Đã tạo Nhóm mới, nhưng không có điểm nào chưa nhóm trong bán kính 30km.";
-            Toastify({
-
-                text: message,
-
-                className: coveredPoints.length > 0 ? "custom-toast success" : "custom-toast warning",
-
-            }).showToast();
-
+/**
+ * (FIX: Đảm bảo khởi tạo polylineCache khi tạo nhóm)
+ */
+function popup_createGroup(pointId) {
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
+    }
+    const centerPoint = allPoints.find(p => String(p.id) === String(pointId));
+    if (!centerPoint) {
+        showToast(`Lỗi: Không tìm thấy điểm ID ${pointId}.`, "error");
+        return;
+    }
+    // Tìm các điểm CHƯA NHÓM nằm trong bán kính
+    const coveredPoints = allPoints.filter(p => {
+        if (p.id === centerPoint.id || p.nhnn) return false;
+        if (p.groupId !== null && p.groupId !== 'REFERENCE') return false;
+        const distance = centerPoint.latlng.distanceTo(p.latlng);
+        return distance <= RADIUS_METERS;
+    });
+    const newGroupNumber = allGroups.length + 1;
+    const newGroupColor = GROUP_COLORS[allGroups.length % GROUP_COLORS.length];
+    const newGroupId = `G_${newGroupNumber}`;
+    // Tạo mảng điểm, BẮT ĐẦU VỚI ĐIỂM TÂM
+    const pointsInGroup = [centerPoint, ...coveredPoints];
+    const newGroup = {
+        id: newGroupId,
+        centerPoint: centerPoint,
+        // ✨ THÊM THUỘC TÍNH NÀY KHI LƯU NHÓM ✨
+        fixedRadiusMeters: RADIUS_METERS, // Lưu lại bán kính cố định
+        fixedRadiusKm: currentRadiusKm,
+        points: pointsInGroup, // <--- THÊM ĐIỂM TÂM VÀO MẢNG NÀY
+        color: newGroupColor,
+        groupNumber: newGroupNumber,
+        routingControls: [],
+        polylineCache: {}
+    };
+    allGroups.push(newGroup);
+    // CẬP NHẬT DỮ LIỆU ĐIỂM TRƯỚC KHI VẼ
+    centerPoint.groupId = newGroupId;
+    const coveredIds = new Set(coveredPoints.map(p => p.id));
+    allPoints.forEach(p => {
+        if (coveredIds.has(p.id)) {
+            p.groupId = newGroupId;
         }
+    });
+    // ĐỒNG BỘ: Cập nhật biến groups (cho Popup Chuyển Nhóm)
+    const pointIdsInGroup = pointsInGroup.map(p => p.id); // Lấy tất cả ID (bao gồm tâm)
+    groups[`NHÓM ${newGroupNumber}`] = {
+        id: newGroupId,
+        color: newGroupColor,
+        pointIds: pointIdsInGroup
+    };
+    // ==========================================================
+    drawAllGroups();
+    updateRankTable();
+    updateFilterOptions();
+    // Fix Lỗi Zoom
+    const message = (coveredPoints.length > 0)
+        ? `Đã tạo thành công Nhóm ${newGroupNumber} với ${coveredPoints.length} điểm.`
+        : "Đã tạo Nhóm mới, nhưng không có điểm nào chưa nhóm trong bán kính 30km.";
+    Toastify({
+        text: message,
+        className: coveredPoints.length > 0 ? "custom-toast success" : "custom-toast warning",
+    }).showToast();
+}
 
 
         function popup_addPointToGroup(pointId, targetGroupId) {
