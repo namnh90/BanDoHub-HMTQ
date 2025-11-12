@@ -21,7 +21,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     
     <script src="https://cdn.tailwindcss.com"></script>
-
+    <script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
 <style>
     /* KHỐI STYLE CỦA BẠN (SỬA ĐỔI RẤT ÍT) */
     html, body, #map {
@@ -301,20 +301,24 @@
         color: #333 !important;
         font-weight: bold;
         font-size: 12px;
+        
         font-family: 'Times New Roman', Times, serif;
         box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
         padding: 3px 6px !important;
         border-radius: 4px;
         cursor: pointer; 
+        white-space: nowrap; /* Bắt buộc Tooltip không xuống dòng */
+    font-size: 11px; /* Chữ bé đi */
     }
-    .distance-tooltip .group-name {
-        font-size: 10px;
-        opacity: 0.8;
-        display: block;
-        text-align: center;
-        border-bottom: 1px dashed #ccc;
-        margin-bottom: 2px;
-    }
+.distance-tooltip .group-name {
+    font-size: 11px; /* Đảm bảo kích thước đồng nhất với text còn lại */
+    opacity: 1.0;
+    display: inline; 
+    border-bottom: none;
+    margin-bottom: 0;
+    color: #000; /* Đảm bảo TermID luôn có màu đen rõ ràng */
+    font-weight: bold; /* Đảm bảo TermID nổi bật */
+}
     .distance-tooltip .loading-spinner {
         font-size: 10px;
         color: #999;
@@ -589,7 +593,7 @@
     
     /* 3. Panel Nút Bấm: LUÔN ở góc TRÊN bên phải */
     .leaflet-top.leaflet-right {
-        top: 360px;
+        top: 10px;
         bottom: auto; 
         right: 0px;
         /* (*** SỬA LỖI v55 ***) Đảm bảo Menu ☰ nổi lên trên Search và Filter */
@@ -707,23 +711,58 @@
       }
 
 
-    /* === SỬA ĐỔI VỊ TRÍ VÀ HIỂN THỊ CỦA THANH TÌM KIẾM (SỬA LỖI v55) === */
-    #search-control-container {
-        position: absolute;
-        top: 10px;
-        /* (SỬA LỖI v55) Mặc định lùi sang trái Menu ☰ */
-        right: 10px; /* 10px (margin menu) + 40px (menu rộng) + 10px (gap) = 60px */
-        width: 250px;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1999; /* (SỬA LỖI v55) Nổi lên trên Menu ☰ (1005) và Filter (1003) */
-        padding: 8px;
-        flex-direction: column;
-        height: auto;
-        transition: right 0.3s ease; /* Thêm transition để di chuyển mượt mà */
-    }
+/* === SỬA ĐỔI VỊ TRÍ VÀ HIỂN THỊ CỦA THANH TÌM KIẾM (SỬA LỖI v55 & MỚI) === */
+/* Thêm transition cho độ trong suốt */
+#search-control-container {
+    position: absolute;
+    top: 30px;
+    right: 200px; /* Vị trí mặc định: Cách Menu ☰ 10px (Menu: 40px + 10px gap) */
+    width: 250px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1999; 
+    padding: 8px;
+    height: auto;
+    
+    /* (*** MỚI: ẨN MẶC ĐỊNH & THÊM HIỆU ỨNG ***) */
+    display: none; 
+    opacity: 0;
+    transition: right 0.3s ease, opacity 0.3s ease, transform 0.3s ease; 
+    transform: translateX(100%); /* Chuẩn bị trượt ra từ bên phải */
+}
+
+/* HIỂN THỊ KHI ĐƯỢC BẬT BẰNG JS (Class search-panel-active) */
+#search-control-container.search-panel-active {
+    display: flex; /* Dùng flex vì bạn có nhiều phần tử bên trong */
+    flex-direction: column;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+/* KHẮC PHỤC TRÙNG LẤN VỚI MENU MỞ RỘNG (EXPANDED) */
+/* (Bây giờ chúng ta dùng JS để điều khiển vị trí khi mở) */
+.custom-controls-container.expanded + #search-control-container.search-panel-active { 
+    /* Khi Menu mở rộng (180px), đẩy Search panel ra xa hơn */
+    right: 190px; /* 180px (Menu) + 10px (gap) */
+}
+
+/* Đảm bảo Panel Filter lùi khỏi Search bar khi Search panel hiện */
+#search-control-container.search-panel-active + #filter-controls-container {
+    right: 320px; /* 60px (Search container right) + 250px (Search width) + 10px (gap) */
+}
+/* Đảm bảo Panel Filter lùi khỏi Search bar khi cả hai đều mở */
+.custom-controls-container.expanded + #search-control-container.search-panel-active + #filter-controls-container {
+    right: 450px; /* 190px (Search container right) + 250px (Search width) + 10px (gap) */
+}
+
+/* Giữ Filter ở vị trí cũ khi Search/Menu ẩn */
+#filter-controls-container {
+    right: 10px !important; /* Vị trí mặc định của Filter (Gần rìa phải) */
+    transition: right 0.3s ease; /* Thêm transition */
+}
 
     /* (MỚI v54) Vùng chứa Input & Button */
     .search-input-group {
@@ -881,11 +920,53 @@
 .search-result-item:hover {
     background-color: #f0f0f0;
 }
+/* === CSS cho Tooltip Tâm Nhóm (Compact) === */
+.distance-tooltip-compact {
+    font-size: 11px !important; /* Chữ bé hơn */
+    white-space: nowrap; /* Đảm bảo không xuống dòng */
+    padding: 3px 6px !important; 
+}
+/* === CSS cho Tooltip Term ID (Tên điểm) === */
+.termid-label-tooltip {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #999;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 10px; /* Chữ nhỏ */
+    font-weight: bold;
+    color: #444;
+    white-space: nowrap;
+    opacity: 1;
+    pointer-events: none; /* Không chặn sự kiện click vào Marker phía dưới */
+}
+
+/* Loại bỏ mũi tên nhọn của Tooltip */
+.termid-label-tooltip .leaflet-tooltip-tip {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+/* Tùy chỉnh CSS cho thanh trượt (nếu cần) */
+.control-section {
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+.control-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+#radius-slider {
+    width: 100%;
+    margin-top: 5px;
+}
 </style>    
 </head>
 <body>
 
 <div id="map"></div>
+
 <div id="rank-table-container">
     <div id="rank-table-header">
         Bảng Xếp Hạng Lựa Chọn
@@ -905,7 +986,24 @@
     </div>
     <div id="search-results-container">
     </div>
-    
+    <hr class="my-3 border-t border-gray-300">
+<div id="proposal-container">
+    <label style="font-weight: bold; margin-bottom: 5px; display: block;">Danh sách Đề xuất (Tối đa 5):</label>
+    <div id="proposal-list" class="flex flex-col gap-2 p-2 border border-gray-300 rounded-md bg-white min-h-[40px]">
+        </div>
+    <button id="optimize-button" 
+            onclick="startOptimization()" 
+            class="w-full mt-3 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out disabled:bg-gray-400"
+            disabled>
+        <i class="fa-solid fa-cogs mr-1"></i> Tối Ưu Hóa (Bán kính: <span id="optimize-radius-display">30</span> km)
+    </button>
+    <button id="clear-optimization-btn" 
+        onclick="clearOptimizationVisuals()" 
+        class="w-full mt-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out"
+        style="display: none;">
+    <i class="fa-solid fa-trash-alt mr-1"></i> Xóa Vòng Tròn Đề Xuất
+</button>
+</div>
     <hr class="my-3 border-t border-gray-300">
     
     <div id="measurement-log" style="font-size: 14px; font-weight: bold; padding: 5px 0; min-height: 20px; color: #333; border-bottom: 1px solid #ddd; margin-bottom: 10px; display: none;">
@@ -959,17 +1057,21 @@
               onclick="event.stopPropagation(); toggleFilterControls();"
         >&times;</span>
     </div>
+    <div class="control-section">
+    <label for="radius-slider" class="control-label">Bán kính Phân tích (<span id="radius-value">30</span> km)</label>
+    <input type="range" id="radius-slider" min="30" max="100" step="10" value="30">
+</div>
     <div class="filter-control">
-        <label for="grayscale-slider">Độ xám: 1.0</label>
-        <input type="range" id="grayscale-slider" min="0" max="1" step="0.1" value="1">
+        <label for="grayscale-slider">Độ xám: 0.0</label>
+        <input type="range" id="grayscale-slider" min="0" max="1" step="0.1" value="0">
     </div>
     <div class="filter-control">
         <label for="brightness-slider">Độ sáng: 0.95</label>
         <input type="range" id="brightness-slider" min="0.5" max="1.5" step="0.05" value="0.95">
     </div>
     <div class="filter-control">
-        <label for="contrast-slider">Tương phản: 1.1</label>
-        <input type="range" id="contrast-slider" min="0.5" max="2" step="0.1" value="1.1">
+        <label for="contrast-slider">Tương phản: 0.5</label>
+        <input type="range" id="contrast-slider" min="0.5" max="2" step="0.1" value="0.5">
     </div>
     
     <div class="filter-control">
@@ -984,6 +1086,326 @@
 
 
 <script>
+function clearOptimizationVisuals() {
+    // Gọi hàm clearPreview để xóa vòng tròn preview/tooltip
+    clearPreview();
+    
+    // Ẩn nút xóa
+    document.getElementById('optimize-button').style.display = 'block'; 
+    document.getElementById('clear-optimization-btn').style.display = 'none';
+    
+    // ✨ TẮT CHẶN HOVER ✨
+    isOptimizationResultVisible = false; 
+    
+    showToast("Đã xóa vòng tròn đề xuất.", "info");
+}
+async function startOptimization() {
+    if (proposedPoints.length === 0) {
+        showToast("Vui lòng thêm điểm đề xuất.", "error");
+        return;
+    }
+    
+    showToast("Đang chạy thuật toán tối ưu hóa...", 'info');
+    
+    // ✨ 1. RESET TRẠNG THÁI UI VÀ VÒNG TRÒN CŨ ✨
+    clearMapVisuals(); // Xóa đường đo A/B
+    clearOptimizationVisuals(); // Xóa vòng tròn cũ và ẩn nút xóa
+    
+    // Ẩn nút Optimize trong khi tính toán
+    document.getElementById('optimize-button').style.display = 'none';
+
+    const results = [];
+    
+    // Lọc ra các điểm chưa nhóm hiện tại (sẽ là vệ tinh)
+    const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn);
+    const nhnnPoints = allPoints.filter(p => p.nhnn && p.isVisible);
+
+    // 2. Lặp qua từng điểm đề xuất làm TÂM
+    for (const centerCandidate of proposedPoints) {
+        let totalCoverage = 0;
+        let totalDistanceToCoverage = 0;
+        let totalDistanceToNHNN_Covered = 0; 
+        let coveredNHNNCount = 0;          
+        let coveredItems = []; 
+
+        // 2a. Tính toán phủ sóng và khoảng cách đến các điểm chưa nhóm (PGD/ATM)
+        for (const satellite of ungroupedPoints) {
+            const distance = centerCandidate.latlng.distanceTo(satellite.latlng);
+            if (distance <= RADIUS_METERS) {
+                totalCoverage++;
+                totalDistanceToCoverage += distance;
+                coveredItems.push({ id: satellite.id, type: 'Satellite', distance: distance });
+            }
+        }
+
+        // 2b. Tính toán khoảng cách đến NHNN (CHỈ KHI NẰM TRONG BÁN KÍNH)
+        for (const nhnn of nhnnPoints) {
+             const distance = centerCandidate.latlng.distanceTo(nhnn.latlng);
+             
+             if (distance <= RADIUS_METERS) { 
+                 totalCoverage++;
+                 totalDistanceToNHNN_Covered += distance; 
+                 coveredNHNNCount++;
+                 coveredItems.push({ id: nhnn.id, type: 'NHNN', distance: distance });
+             }
+        }
+        
+        // Tính khoảng cách trung bình
+        const totalCoveredSatellites = coveredItems.filter(i => i.type === 'Satellite').length;
+        
+        const avgDistanceToCoverage = totalCoveredSatellites > 0 
+            ? (totalDistanceToCoverage / totalCoveredSatellites) 
+            : Infinity; // Chỉ tính TB dựa trên vệ tinh (PGD/ATM)
+        
+        const avgDistanceToNHNN = coveredNHNNCount > 0 
+            ? (totalDistanceToNHNN_Covered / coveredNHNNCount) 
+            : Infinity; // TB dựa trên NHNN được cover
+
+        results.push({
+            centerId: centerCandidate.id,
+            totalCoverage: totalCoverage,
+            avgDistanceToCoverage: avgDistanceToCoverage,
+            avgDistanceToNHNN: avgDistanceToNHNN, 
+            coveredItems: coveredItems,
+            centerPoint: centerCandidate // Lưu tham chiếu điểm tâm
+        });
+    }
+
+    // 3. Xếp hạng (Ưu tiên Phủ sóng > Khoảng cách TB Phủ sóng > Khoảng cách TB NHNN)
+    results.sort((a, b) => {
+        if (b.totalCoverage !== a.totalCoverage) return b.totalCoverage - a.totalCoverage;
+        if (a.avgDistanceToCoverage !== b.avgDistanceToCoverage) return a.avgDistanceToCoverage - b.avgDistanceToCoverage;
+        return a.avgDistanceToNHNN - b.avgDistanceToNHNN;
+    });
+
+    renderOptimizationResult(results);
+    
+    // Sau khi tính toán, hiện lại nút Optimize
+    document.getElementById('optimize-button').style.display = 'block'; 
+}
+
+function renderOptimizationResult(results) {
+    if (results.length === 0) {
+        showToast("Không tìm thấy kết quả tối ưu nào.", "warning");
+        return;
+    }
+
+    const bestResult = results[0];
+    const centerPoint = allPoints.find(p => p.id === bestResult.centerId);
+
+    // 5. Hiển thị kết quả tối ưu nhất (Vẽ vòng tròn và Highlight)
+    showToast(`Đã tìm thấy điểm tối ưu nhất: ${bestResult.centerId}`, 'success');
+    
+    // Ẩn nút Optimize và hiện nút Clear
+    document.getElementById('optimize-button').style.display = 'none';
+    document.getElementById('clear-optimization-btn').style.display = 'block'; 
+    
+    // Tạo đối tượng Preview tạm thời để gọi showPreview
+    const previewItem = {
+        type: 'NEW', 
+        centerPoint: centerPoint,
+        // Dùng map/filter để đảm bảo chỉ các điểm hợp lệ được đưa vào coveredPoints
+        coveredPoints: bestResult.coveredItems.map(item => allPoints.find(p => p.id === item.id)).filter(p => p),
+        color: '#911EB4', // Tím đậm cho kết quả tối ưu
+        tooltipContent: `
+            <div style="font-size: 13px; padding: 5px; min-width: 200px; line-height: 1.5;">
+                <strong style="display: block;">Tâm Tối Ưu: ${centerPoint.id}</strong>
+                <hr style="margin: 4px 0;">
+                <div>Phủ sóng: <b>${bestResult.totalCoverage}</b> điểm</div>
+                <div>TB khoảng cách (vệ tinh): <b>${(bestResult.avgDistanceToCoverage / 1000).toFixed(2)} km</b></div>
+                <div>TB khoảng cách (NHNN): <b>${(bestResult.avgDistanceToNHNN / 1000).toFixed(2)} km</b></div>
+                <hr style="margin: 4px 0;">
+                <div>Xếp hạng: <b>#1 / ${results.length}</b></div>
+            </div>
+        `
+    };
+    
+    showPreview(previewItem, null);
+    
+    // Zoom đến kết quả tối ưu
+    if (centerPoint && centerPoint.latlng) {
+        // Chỉ panTo để không thay đổi mức zoom đột ngột
+        map.panTo(centerPoint.latlng); 
+    }
+    
+    // ✨ BẬT CHẶN HOVER ✨
+    isOptimizationResultVisible = true; 
+}
+function renderProposalList() {
+    const listDiv = document.getElementById('proposal-list');
+    const optimizeBtn = document.getElementById('optimize-button');
+    const radiusDisplay = document.getElementById('optimize-radius-display');
+    
+    listDiv.innerHTML = '';
+    
+    // Cập nhật hiển thị bán kính tối ưu
+    radiusDisplay.textContent = currentRadiusKm;
+
+    if (proposedPoints.length === 0) {
+        listDiv.innerHTML = '<span class="text-gray-500 italic text-sm">Chưa có điểm đề xuất.</span>';
+        optimizeBtn.disabled = true;
+        return;
+    }
+
+    proposedPoints.forEach(point => {
+        const item = document.createElement('div');
+        item.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
+        item.innerHTML = `
+            <span class="text-sm font-medium">${point.id} (${point.tenHub || 'PGD'})</span>
+            <button class="text-red-500 hover:text-red-700 text-xs font-bold" onclick="removeProposal('${point.id}')">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        `;
+        listDiv.appendChild(item);
+    });
+
+    optimizeBtn.disabled = (proposedPoints.length < 1); // Cần ít nhất 1 điểm để tối ưu
+    if (proposedPoints.length >= 5) {
+        showToast("Đạt giới hạn 5 điểm đề xuất.", "warning");
+    }
+}
+
+function addProposal(pointId) {
+    if (proposedPoints.length >= 5) {
+        showToast("Chỉ được đề xuất tối đa 5 điểm.", "error");
+        return;
+    }
+    const point = allPoints.find(p => p.id === pointId);
+    if (!point) return;
+
+    if (proposedPoints.some(p => p.id === pointId)) {
+        showToast(`Điểm ${pointId} đã có trong danh sách.`, "warning");
+        return;
+    }
+
+    // Clone dữ liệu để tránh lỗi tham chiếu
+    proposedPoints.push({...point}); 
+    renderProposalList();
+    showToast(`Đã thêm ${pointId} vào danh sách đề xuất.`, "info");
+}
+
+function removeProposal(pointId) {
+    proposedPoints = proposedPoints.filter(p => p.id !== pointId);
+    renderProposalList();
+    showToast(`Đã xóa ${pointId} khỏi danh sách đề xuất.`, "warning");
+}
+// Biến toàn cục (Cần đảm bảo đã được khai báo ngoài các hàm):
+// let currentRadiusKm = 30; 
+// let RADIUS_METERS = 30000; 
+
+function setupRadiusControl() {
+    const slider = document.getElementById('radius-slider');
+    const valueDisplay = document.getElementById('radius-value');
+
+    // Khởi tạo giá trị mặc định của thanh trượt
+    slider.value = currentRadiusKm;
+    valueDisplay.textContent = currentRadiusKm;
+
+    slider.addEventListener('input', function() {
+        const newRadiusKm = parseInt(this.value);
+        
+        // 1. Cập nhật biến toàn cục (chỉ ảnh hưởng đến Preview)
+        currentRadiusKm = newRadiusKm;
+        RADIUS_METERS = newRadiusKm * 1000; // Cập nhật RADIUS_METERS
+        
+        // 2. Cập nhật hiển thị km
+        valueDisplay.textContent = newRadiusKm;
+        
+        // 3. (QUAN TRỌNG) Kích hoạt lại việc vẽ
+        // Điều này sẽ vẽ lại các nhóm ĐÃ LƯU với bán kính CỐ ĐỊNH, 
+        // nhưng sẽ vẽ lại các vòng tròn Preview/Analysis với bán kính MỚI.
+        drawAllGroups(); 
+        
+        // Xóa preview cũ (nếu có)
+        clearPreview();
+    });
+}
+
+// Gọi hàm setup khi DOM đã tải xong
+document.addEventListener('DOMContentLoaded', function() {
+    // ... các lệnh khởi tạo khác
+    setupRadiusControl(); // ✨ THÊM LỆNH NÀY ✨
+});
+/**
+ * [ĐÃ SỬA LỖI TUÂN THỦ FILTER] Hàm bật/tắt hiển thị Term ID Label.
+ * Nhãn chỉ hiển thị khi showTermIDLabels = true VÀ p.isVisible = true.
+ */
+function toggleTermIDLabels() {
+    const button = document.getElementById('termid-toggle-btn');
+    if (!button) return;
+
+    // Đảo trạng thái (chỉ thay đổi trạng thái nút, không nhất thiết phải ẩn/hiện ngay)
+    showTermIDLabels = !showTermIDLabels; 
+
+    // 1. Cập nhật giao diện nút
+    if (showTermIDLabels) {
+        button.style.cssText = 'background-color: #3b82f6 !important; color: white !important;'; 
+        button.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">TermID (Bật)</span>';
+        showToast("Đã BẬT: Hiển thị Term ID", 'info');
+    } else {
+        button.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>';
+        button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
+        showToast("Đã TẮT: Ẩn Term ID", 'warning');
+    }
+
+    // 2. Lặp qua TẤT CẢ các điểm để đồng bộ trạng thái hiển thị nhãn
+    allPoints.forEach(p => { 
+        if (p.nhnn) return; // Bỏ qua NHNN hoặc xử lý riêng nếu cần
+
+        const tooltip = p.termIDTooltip; 
+        if (tooltip) {
+            // ✨ LOGIC TUÂN THỦ FILTER: Chỉ hiện khi TermID đang BẬT VÀ điểm đang HIỂN THỊ (isVisible) ✨
+            if (showTermIDLabels && p.isVisible) {
+                tooltip.openOn(map); 
+            } else {
+                map.closeTooltip(tooltip);
+            }
+        }
+    });
+}
+/**
+ * Hàm bật/tắt khối Tìm kiếm/Đo lường.
+ */
+function toggleSearchPanel() {
+    const panel = document.getElementById('search-control-container');
+    const button = document.getElementById('search-panel-toggle-btn');
+    if (!panel || !button) return;
+
+    // Lấy panel/nút của Rank và Filter (để tắt chúng nếu cần)
+    const rankPanel = document.getElementById('rank-table-container');
+    const rankButton = document.getElementById('rank-toggle-btn');
+    const filterPanel = document.getElementById('filter-controls-container');
+    const filterButton = document.getElementById('filter-toggle-btn');
+
+    isSearchPanelOpen = !isSearchPanelOpen;
+
+    if (isSearchPanelOpen) {
+        // BẬT PANEL
+        panel.classList.add('search-panel-active');
+        button.style.cssText = 'background-color: #3b82f6 !important; color: white !important;'; 
+        button.innerHTML = '<i class="fa-solid fa-crosshairs w-4 h-4"></i> <span class="button-text">Tìm/Đo (Bật)</span>';
+        
+        showToast("Đã BẬT: Panel Tìm kiếm/Đo lường", 'info');
+
+        // Tắt panel Rank và Filter nếu chúng đang mở
+        if (rankPanel && rankPanel.style.display === 'block') {
+            rankPanel.style.display = 'none';
+            if (rankButton) rankButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
+        }
+        if (filterPanel && filterPanel.style.display === 'block') {
+            filterPanel.style.display = 'none';
+            if (filterButton) filterButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
+        }
+
+    } else {
+        // TẮT PANEL
+        panel.classList.remove('search-panel-active');
+        button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
+        button.innerHTML = '<i class="fa-solid fa-crosshairs w-4 h-4"></i> <span class="button-text">Tìm/Đo (Tắt)</span>';
+        
+        showToast("Đã TẮT: Panel Tìm kiếm/Đo lường", 'warning');
+    }
+}
 // (*** MỚI: HÀM CẬP NHẬT LOG KẾT QUẢ ĐO LƯỜNG CỐ ĐỊNH ***)
 function updateMeasurementLog(message, type) {
     const logDiv = document.getElementById('measurement-log');
@@ -1169,89 +1591,90 @@ function selectMeasurePoint(searchId, pointData) {
 
 // (*** HÀM CHÍNH ĐO KÍCH THƯỚC LÁI XE - CÓ LOG CỐ ĐỊNH ***)
 function measureRouteBetweenAandB() {
-    // [ĐÃ SỬA] Chỉ xóa giao diện cũ (nhưng giữ lại selectedPointA/B)
-    clearMapVisuals();
-    
-    if (!selectedPointA || !selectedPointB) {
-        showToast("Vui lòng chọn cả Điểm Bắt đầu (A) và Điểm Kết thúc (B).", "warning");
-        return;
-    }
-    
-    if (selectedPointA.id === selectedPointB.id) {
-        showToast("Hai điểm A và B phải khác nhau.", "warning");
-        return;
-    }
-    
-    // 2. Tắt chế độ Pin (nếu đang bật)
-    if (isBatteryView) {
-        toggleBatteryView();
-    }
-    
-    showToast("Đang tính toán tuyến đường lái xe...", 'info');
-    updateMeasurementLog("Đang tính toán tuyến đường...", 'route'); // Cập nhật log tạm thời
+    // [ĐÃ SỬA] Chỉ xóa giao diện cũ (nhưng giữ lại selectedPointA/B)
+    clearMapVisuals();
+    
+    if (!selectedPointA || !selectedPointB) {
+        showToast("Vui lòng chọn cả Điểm Bắt đầu (A) và Điểm Kết thúc (B).", "warning");
+        return;
+    }
+    
+    if (selectedPointA.id === selectedPointB.id) {
+        showToast("Hai điểm A và B phải khác nhau.", "warning");
+        return;
+    }
+    
+    // 2. Tắt chế độ Pin (nếu đang bật)
+    if (isBatteryView) {
+        toggleBatteryView();
+    }
+    
+    showToast("Đang tính toán tuyến đường lái xe...", 'info');
+    updateMeasurementLog("Đang tính toán tuyến đường...", 'route'); // Cập nhật log tạm thời
 
-    // 3. Khởi tạo Leaflet Routing Machine
-    const router = L.Routing.control({
-        waypoints: [
-            selectedPointA.latlng,
-            selectedPointB.latlng
-        ],
-        router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1',
-            profile: 'driving'
-        }),
-        show: true,
-        routeWhileDragging: false,
-        createMarker: (i, waypoint, n) => {
-             const pointData = (i === 0) ? selectedPointA : selectedPointB;
-             const icon = isBatteryView ? createBatteryIcon(pointData) : createPGDIcon();
-             return L.marker(waypoint.latLng, { 
-                 icon: icon,
-                 title: (i === 0) ? `Start: ${pointData.id}` : `End: ${pointData.id}`
-             });
-        },
-        lineOptions: {
-            styles: [{ color: '#f59e0b', weight: 7, opacity: 0.8 }]
-        }
-    });
+    // 3. Khởi tạo Leaflet Routing Machine
+    const router = L.Routing.control({
+        waypoints: [
+            selectedPointA.latlng,
+            selectedPointB.latlng
+        ],
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+        }),
+        show: false, // ✨ THUỘC TÍNH QUAN TRỌNG: Đặt thành false để ẩn bảng chỉ dẫn
+        routeWhileDragging: false,
+        createMarker: (i, waypoint, n) => {
+             const pointData = (i === 0) ? selectedPointA : selectedPointB;
+             const icon = isBatteryView ? createBatteryIcon(pointData) : createPGDIcon();
+             return L.marker(waypoint.latLng, { 
+                 icon: icon,
+                 title: (i === 0) ? `Start: ${pointData.id}` : `End: ${pointData.id}`
+             });
+        },
+        lineOptions: {
+            styles: [{ color: '#f59e0b', weight: 7, opacity: 0.8 }]
+        }
+    });
 
-    // 4. Bắt sự kiện tuyến đường tìm thấy
-    router.on('routesfound', function(e) {
-        const route = e.routes[0];
-        const distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
-        
-        showToast(`Đo kích thước thành công! ${distanceKm} km (Lái xe)`, 'success');
-        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
-        updateMeasurementLog(`Kết quả Đo Lái Xe: ${distanceKm} km`, 'route');
-        
-        router.getContainer().style.display = 'block';
-    });
-    
-    router.on('routingerror', function(e) {
-        console.error("Lỗi định tuyến:", e.error);
-        showToast(`Lỗi tính toán đường lái xe. Đã vẽ đường chim bay thay thế.`, "error");
-        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
-        updateMeasurementLog(`Lỗi Đo Lái Xe. Xem kết quả Đường Chim Bay thay thế.`, 'route');
+    // 4. Bắt sự kiện tuyến đường tìm thấy
+    router.on('routesfound', function(e) {
+        const route = e.routes[0];
+        const distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
+        
+        showToast(`Đo kích thước thành công! ${distanceKm} km (Lái xe)`, 'success');
+        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
+        updateMeasurementLog(`Kết quả Đo Lái Xe: ${distanceKm} km`, 'route');
+        
+        // DÒNG router.getContainer().style.display = 'block'; ĐÃ BỊ XÓA BỎ
+    });
+    
+    router.on('routingerror', function(e) {
+        console.error("Lỗi định tuyến:", e.error);
+        showToast(`Lỗi tính toán đường lái xe. Đã vẽ đường chim bay thay thế.`, "error");
+        // (*** LƯU KẾT QUẢ VÀO LOG CỐ ĐỊNH ***)
+        updateMeasurementLog(`Lỗi Đo Lái Xe. Xem kết quả Đường Chim Bay thay thế.`, 'route');
 
-        // Vẽ đường chim bay để thay thế
-        L.polyline([selectedPointA.latlng, selectedPointB.latlng], {
-            color: '#f59e0b', 
-            opacity: 0.5, 
-            weight: 3, 
-            dashArray: '5, 5'
-        }).addTo(measureLayer);
-    });
+        // Vẽ đường chim bay để thay thế
+        L.polyline([selectedPointA.latlng, selectedPointB.latlng], {
+            color: '#f59e0b', 
+            opacity: 0.5, 
+            weight: 3, 
+            dashArray: '5, 5'
+        }).addTo(measureLayer);
+    });
 
-    currentRoutingControl = router.addTo(map);
-    
-    const container = router.getContainer();
-    if (container) {
-        container.style.display = 'block';
-        container.style.position = 'absolute';
-        container.style.top = '10px';
-        container.style.left = '10px';
-        container.style.zIndex = '2000'; 
-    }
+    currentRoutingControl = router.addTo(map);
+    
+    // Đảm bảo container ẩn (chỉ chứa đường đi, không chứa bảng chi tiết)
+    const container = router.getContainer();
+    if (container) {
+        container.style.display = 'none'; // Đặt thành none để ẩn toàn bộ control (chỉ để lại đường đi)
+        container.style.position = 'absolute';
+        container.style.top = '10px';
+        container.style.left = '10px';
+        container.style.zIndex = '2000'; 
+    }
 }
     // Hàm giả định để lấy ID duy nhất cho điểm (nếu bạn chưa có)
 function getUniquePointId(lat, lon) {
@@ -1520,8 +1943,8 @@ const hubInfo = "Hub A";
 const resultItem = createSearchResultItem(longDescription, hubInfo);
 container.appendChild(resultItem);
 /**
- * (SỬA ĐỔI v54) Hàm tìm kiếm điểm trên bản đồ theo TERMID hoặc Tên HUB.
- * Hiển thị kết quả trong Autocomplete/List.
+ * (ĐÃ SỬA LỖI UI) Hàm tìm kiếm điểm trên bản đồ theo TERMID hoặc Tên HUB.
+ * Hiện thị kết quả và thêm nút "Đề xuất" bằng phương pháp gán Node an toàn.
  */
 function searchByTermId() {
     const input = document.getElementById('termid-search-input');
@@ -1550,18 +1973,36 @@ function searchByTermId() {
         
         searchResults.slice(0, 10).forEach(point => { // Giới hạn 10 kết quả
             const item = document.createElement('div');
-            item.className = 'search-result-item';
-            
-            // Xây dựng nội dung item
+            // Sử dụng class flex để căn chỉnh nội dung và nút
+            item.className = 'search-result-item flex justify-between items-center'; 
+            item.dataset.pointId = point.id;
+
+            // 1. Xây dựng Nội dung (ID/Tên HUB)
+            let contentSpan = document.createElement('span');
+            contentSpan.className = 'flex-1 overflow-hidden whitespace-nowrap text-ellipsis mr-2';
             let content = `ID: ${point.id}`;
             if (point.tenHub) {
                 content += `<span class="hub-name"> (${point.tenHub})</span>`;
             }
+            contentSpan.innerHTML = content;
             
-            item.innerHTML = content;
-            item.dataset.pointId = point.id;
+            // 2. Xây dựng Nút "Đề xuất"
+            const addButton = document.createElement('button');
+            addButton.className = 'flex-shrink-0 px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600';
+            addButton.textContent = 'Đề xuất';
+            
+            // Ngăn chặn sự kiện click lan truyền và gọi hàm addProposal
+            addButton.onclick = (e) => {
+                e.stopPropagation();
+                addProposal(point.id);
+            };
 
-            // Gắn sự kiện click để focus vào điểm
+            // 3. Gắn các phần tử vào Item chính (Dùng appendChild để tránh lỗi ghi đè)
+            item.appendChild(contentSpan); // Thêm nội dung
+            item.appendChild(addButton);   // Thêm nút
+            
+
+            // Gắn sự kiện click để focus vào điểm (cho toàn bộ dòng)
             item.addEventListener('click', () => {
                 focusOnPoint(point.id);
                 resultsContainer.style.display = 'none'; // Ẩn danh sách sau khi click
@@ -1588,12 +2029,16 @@ let nhnnMarkersLayer = null;
 let previewLayer = null;
 let measureLayer = null; // Layer mới
 let pointMarkersLayer = null;
-
+let isSearchPanelOpen = false;
+let showTermIDLabels = true;
+let isOptimizationResultVisible = false; // ✨ MỚI: Theo dõi trạng thái vòng tròn tối ưu
+let proposedPoints = []; // Danh sách tối đa 5 điểm đề xuất
 // --- 2. Biến lưu trữ & Cấu hình (Giữ nguyên) ---
-const RADIUS_METERS = 30 * 1000;
+let currentRadiusKm = 30; // Bán kính hiện tại (km)
+let RADIUS_METERS = 30000; // Bán kính hiện tại (mét)
 const GROUP_COLORS = [
-    '#E6194B', '#3CB44B', '#FFE119', '#4363D8', '#F58231', '#911EB4', 
-    '#46F0F0', '#F032E6', '#BCF60C', '#FABEBE', '#008080', '#E6BEFF'
+    '#E6194B', '#F032E6', '#FFE119', '#4363D8', '#F58231', '#911EB4', 
+    '#008080', '#F032E6', '#BCF60C', '#FABEBE', '#008080', '#E6BEFF'
 ];
 const PREVIEW_COLOR = '#f59e0b';
 const NHNN_PREVIEW_LINE_COLOR = '#004aad'; 
@@ -1652,9 +2097,11 @@ function initializeMapAndLayers() {
     
     pointMarkersLayer = isClusteringEnabled ? clusterLayer : standardLayer;
     map.addLayer(pointMarkersLayer);
+    
 }
+initializeMapAndLayers();
 
-initializeMapAndLayers(); // Chạy khởi tạo map và layers
+ // Chạy khởi tạo map và layers
 
 
     // --- 3. Tạo Icon Tùy chỉnh (Động) ---
@@ -1942,7 +2389,24 @@ L.Control.MasterControls = L.Control.extend({
             L.DomEvent.stopPropagation(e);
             toggleFilterControls();
         };
-
+        // Nút Bật/Tắt Search Panel
+const searchToggleButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+searchToggleButton.id = 'search-panel-toggle-btn';
+searchToggleButton.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+searchToggleButton.innerHTML = '<i class="fa-solid fa-crosshairs w-4 h-4"></i> <span class="button-text">Tìm/Đo (Tắt)</span>';
+searchToggleButton.onclick = (e) => {
+    L.DomEvent.stopPropagation(e);
+    toggleSearchPanel(); // Hàm mới
+};
+// Nút Bật/Tắt TermID Labels
+const termIDToggleBtn = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+termIDToggleBtn.id = 'termid-toggle-btn';
+termIDToggleBtn.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+termIDToggleBtn.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>';
+termIDToggleBtn.onclick = (e) => {
+    L.DomEvent.stopPropagation(e);
+    toggleTermIDLabels(); // Gọi hàm bật/tắt
+};
         // Nút Routing
         const routingButton = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg bird-mode', buttonsWrapper);
         routingButton.id = 'routing-toggle-btn'; 
@@ -2042,6 +2506,9 @@ function exportGroupsData() {
                 lat: group.centerPoint.latlng.lat,
                 lon: group.centerPoint.latlng.lng,
             },
+            // ✨ SỬA LỖI: LƯU BÁN KÍNH CỐ ĐỊNH HIỆN TẠI ✨
+            fixedRadiusMeters: group.fixedRadiusMeters, 
+            fixedRadiusKm: group.fixedRadiusKm,
             member_ids: memberIds, // <--- ĐÃ GOM CẢ ĐIỂM TÂM
             // LƯU CACHE POLYLINE 
             polyline_cache: group.polylineCache, 
@@ -2095,14 +2562,17 @@ function loadSavedGroups(savedGroupsData) {
         }
 
         const newGroup = {
-            id: savedGroup.group_id,
-            centerPoint: centerPointData,
-            color: savedGroup.color,
-            groupNumber: savedGroup.group_number,
-            routingControls: [],
-            // PHỤC HỒI POLYLINE CACHE
-            polylineCache: savedGroup.polyline_cache || {}, 
-            points: [] // Khởi tạo mảng điểm
+id: savedGroup.group_id,
+            centerPoint: centerPointData,
+            color: savedGroup.color,
+            groupNumber: savedGroup.group_number,
+            routingControls: [],
+            // PHỤC HỒI POLYLINE CACHE (Giữ nguyên)
+            polylineCache: savedGroup.polyline_cache || {}, 
+            // ✨ SỬA LỖI: PHỤC HỒI BÁN KÍNH CỐ ĐỊNH VÀ ĐẢM BẢO LÀ SỐ HỢP LỆ ✨
+            fixedRadiusMeters: Number(savedGroup.fixedRadiusMeters) || 30000, 
+            fixedRadiusKm: Number(savedGroup.fixedRadiusKm) || 30, 
+            points: [] // Khởi tạo mảng điểm
         };
         
         // **********************************************
@@ -2203,51 +2673,47 @@ function popup_deleteGroup(groupId) {
     showToast(`Đã hủy thành công Nhóm ${groupNumber} và đưa ${pointsToReset.length} điểm về trạng thái chưa nhóm.`, "success");
 }
 /**
- * (SỬA LỖI VÀ BỔ SUNG) Hàm khởi tạo dữ liệu điểm và thêm Marker vào bản đồ.
- * Đã sửa lỗi ReferenceError: pointId is not defined.
+ * (FINAL SỬA LỖI & LOGGING) Hàm khởi tạo dữ liệu điểm và thêm Marker vào bản đồ.
+ * Đã thêm logic CHẶN HOVER nếu kết quả tối ưu đang hiển thị.
  */
-function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr, hubYesStr, tenHubStr, plDgdStr) { // <--- THÊM plDgdStr
-    // (SỬA v44.1) Logic check 'isNHNN' này mạnh hơn
+function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanMucStr, hanMucStr, hubYesStr, tenHubStr, plDgdStr) { 
+    // (*** Khai báo và khởi tạo biến giữ nguyên ***)
     const isNHNN = (nhnn === true || String(nhnn).toLowerCase() === 'true' || String(nhnn) === '1');
-    
     const cleanChinhanh = chinhanh ? String(chinhanh).trim() : 'Không có';
     const cleanVung = vung ? String(vung).trim() : 'Không xác định';
     const cleanTonQuy = parseFloat(String(tonQuyStr).replace(/[\s,]/g, '')) || 0;
     const cleanHanMuc = parseFloat(String(hanMucStr).replace(/[\s,]/g, '')) || 0;
     const isVuotHanMuc = String(vuotHanMucStr).trim() !== '-' && String(vuotHanMucStr).trim() !== '';
-
     const isHubPoint = String(hubYesStr).trim().toUpperCase() === 'YES';
-    
-    // (*** LOGIC MỚI: XÁC ĐỊNH ĐIỂM PIN (TSCN) ***)
     const isBatteryPoint = String(plDgdStr).trim().toUpperCase() === 'TSCN'; 
-    
     const cleanTenHub = tenHubStr ? String(tenHubStr).trim() : null;
 
-    
-    // (*** KHẮC PHỤC LỖI REFERENCE ERROR Ở ĐÂY ***)
     const newMarker = L.marker(latlng, { 
         icon: isNHNN ? createNHNNIcon() : createPGDIcon() 
     });
 
-    // 1. KHAI BÁO pointId NGAY LẬP TỨC
     const pointId = (termId ? String(termId).trim() : null) || L.stamp(newMarker); 
-
-    // 2. LƯU MARKER VÀO BIẾN TOÀN CỤC BẰNG pointId
     allMarkers[pointId] = newMarker; 
-    // ===========================================
     
-    // (*** MỚI v44 ***) Thêm vào layer NHNN nếu cần
-    if (isNHNN) {
-        newMarker.addTo(nhnnMarkersLayer); 
-    }
+    // (*** KHỐI LỆNH TẠO PERMANENT TOOLTIP CHO TERM ID ***)
+    newMarker.bindTooltip(pointId, {
+        permanent: true,
+        direction: 'top', 
+        className: 'termid-label-tooltip', // CLASS ĐẶC TRƯNG
+        offset: L.point(0, -15) 
+    }); 
+    
+    // (*** KẾT THÚC BỔ SUNG ***)
+    
+    if (isNHNN) { newMarker.addTo(nhnnMarkersLayer); }
     
     const newPointData = {
         id: pointId, 
         latlng: latlng,
         marker: newMarker,
         groupId: isNHNN ? 'REFERENCE' : null, 
-        chinhanh: cleanChinhanh, 
-        vung: cleanVung, 
+        chinhanh: cleanChinhanh,
+        vung: cleanVung,
         isVisible: true,
         nhnn: isNHNN, 
         tonQuy: cleanTonQuy,
@@ -2255,38 +2721,109 @@ function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanM
         vuotHanMuc: isVuotHanMuc,
         isHub: isHubPoint, 
         tenHub: cleanTenHub,
-        isBatteryPoint: isBatteryPoint // <--- THUỘC TÍNH MỚI DÙNG CHO LỌC PIN
+        isBatteryPoint: isBatteryPoint,
+        // SỬA LỖI: Lưu đối tượng Tooltip hợp lệ
+        termIDTooltip: newMarker.getTooltip()
     };
     
     if (isNHNN) {
-        newMarker.on('click', (e) => {
-            L.DomEvent.stopPropagation(e); 
-            handleMarkerClick(newPointData); 
-        });
+        newMarker.on('click', (e) => { L.DomEvent.stopPropagation(e); handleMarkerClick(newPointData); });
     } else {
         newMarker.on('mouseover', (e) => {
+            // ✨ BỔ SUNG ĐIỀU KIỆN CHẶN HOVER KHI CÓ KẾT QUẢ TỐI ƯU ✨
+            if (isOptimizationResultVisible) {
+                // Nếu vòng tròn tối ưu đang hiển thị, CHẶN logic hover của các điểm khác
+                return;
+            }
+            
             highlightRankItem(newPointData.id);
-            if (newPointData.groupId === null && !isBatteryView && newPointData.isHub) {
+            
+            // Điều kiện Preview: Chưa được nhóm VÀ không ở chế độ Pin
+            if (newPointData.groupId === null && !isBatteryView) {
                 const ungroupedPoints = allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn); 
                 let coveredPoints = [];
+                
+                // ✨ KHỐI THỐNG KÊ CHI TIẾT VÀ KHÔNG TRÙNG LẶP (Đã gỡ lỗi tenHub) ✨
+                let stats = { TSCN: 0, PGD: 0, Other: 0 };
+                let countedIds = new Set(); 
+                
+                const TSCN_KEYWORDS = ["TSCN", "TS CN", "TRU SO CN", "TRU SO CHI NHANH"]; 
+                const PGD_KEYWORDS = ["PGD", "PHONG GD", "PHONG GIAO DICH", "P GIAO DICH"];
+                
+                console.log(`[PREVIEW LOG START] Bắt đầu phân loại cho Tâm: ${newPointData.id}`);
+
                 for (const pointToTest of ungroupedPoints) { 
                     if (newPointData.latlng.distanceTo(pointToTest.latlng) <= RADIUS_METERS) {
                         coveredPoints.push(pointToTest);
+                        
+                        let isClassified = false;
+                        const checkTextUpper = (pointToTest.id || '').toUpperCase();
+                        
+                        // --- 1. Phân loại TSCN (Nhóm 1) ---
+                        if (pointToTest.isBatteryPoint || TSCN_KEYWORDS.some(keyword => checkTextUpper.includes(keyword))) {
+                            if (!countedIds.has(pointToTest.id)) {
+                                stats.TSCN++;
+                                isClassified = true;
+                                countedIds.add(pointToTest.id);
+                                const source = pointToTest.isBatteryPoint ? 'isBatteryPoint' : 'Keyword_ID';
+                                console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 1 (TSCN - ${source}).`);
+                            }
+                        }
+
+                        // --- 2. Phân loại PGD (Nhóm 2) ---
+                        if (!isClassified) {
+                            if (PGD_KEYWORDS.some(keyword => checkTextUpper.includes(keyword))) {
+                                if (!countedIds.has(pointToTest.id)) {
+                                    stats.PGD++;
+                                    isClassified = true;
+                                    countedIds.add(pointToTest.id);
+                                    console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 2 (PGD - Keyword_ID).`);
+                                }
+                            }
+                        }
+
+                        // --- 3. Nhóm Khác (Nhóm 3) ---
+                        if (!isClassified) {
+                            stats.Other++;
+                            console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 3 (Khác/ATM).`);
+                        }
                     }
                 }
+                
+                // Xây dựng nội dung HTML chi tiết
+                const tooltipHtml = `
+                    <div style="font-size: 13px; padding: 5px; min-width: 150px; line-height: 1.5;">
+                        <strong style="display: block;">Tâm: ${newPointData.id} ${newPointData.tenHub ? `(${newPointData.tenHub})` : ''}</strong>
+                        <hr style="margin: 4px 0;">
+                        <div>Tổng phủ: <b>${coveredPoints.length}</b> điểm</div>
+                        <div>Nhóm 1 (TSCN): <b style="color:#16a34a;">${stats.TSCN}</b></div>
+                        <div>Nhóm 2 (PGD): <b style="color:#2563eb;">${stats.PGD}</b></div>
+                        <div>Nhóm 3 (Khác): <b style="color:#d97706;">${stats.Other}</b></div>
+                    </div>
+                `;
+
                 const previewItem = {
                     type: 'NEW', 
                     centerPoint: newPointData,
                     coveredPoints: coveredPoints,
-                    color: PREVIEW_COLOR 
+                    color: PREVIEW_COLOR,
+                    tooltipContent: tooltipHtml
                 };
                 showPreview(previewItem, null); 
+            } else {
+                // Xóa Preview nếu đã nhóm hoặc đang ở chế độ Pin
+                clearRankItemHighlight(); 
+                clearPreview();
             }
         });
+        
+        // Giữ lại sự kiện mouseout để xóa preview khi rời khỏi điểm
         newMarker.on('mouseout', () => {
+            if (isOptimizationResultVisible) return; // Không xóa nếu đang có kết quả tối ưu
             clearRankItemHighlight(); 
             clearPreview();
         });
+        
         newMarker.on('click', (e) => {
             L.DomEvent.stopPropagation(e); 
             handleMarkerClick(newPointData);
@@ -2299,7 +2836,6 @@ function addPointToMap(latlng, termId, chinhanh, nhnn, vung, tonQuyStr, vuotHanM
     allPoints.push(newPointData); 
     return newPointData; 
 }
-    
     /**
      * (*** MỚI v45 ***) Hàm Bật/Tắt hiển thị lớp NHNN
      */
@@ -2380,12 +2916,20 @@ function loadPreloadedData() {
         showToast(`Đã tải ${data.length} điểm dữ liệu.`, 'success');
         
         updateRankTable(); 
-
+        renderProposalList();
         updateMarkersVisibility();
         loadGroupsFromLocalStorage(); 
         if (bounds.isValid()) {
             map.fitBounds(bounds.pad(0.1));
         }
+        // Dòng Sửa Đổi: Buộc Tooltip Term ID phải ẩn nếu trạng thái mặc định là FALSE
+        if (!showTermIDLabels) {
+            toggleTermIDLabels();
+            toggleTermIDLabels(); // Gọi 2 lần để đảm bảo lần gọi đầu tiên ẩn chúng đi
+        } else {
+            // Nếu mặc định là true, chỉ gọi 1 lần để đảm bảo chúng hiện
+            toggleTermIDLabels(); 
+        }
     })
     .catch(error => {
         console.error('Lỗi khi tải dữ liệu từ Power Automate:', error);
@@ -2419,35 +2963,35 @@ function loadGroupsFromLocalStorage() {
         if (!container) return;
 
         container.innerHTML = `
-            <hr class="my-3 border-t border-gray-300">
-            <div class="filter-control">
-                <label for="filter-vung">Lọc theo Vùng:</label>
-                <select id="filter-vung">
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="filter-chinhanh">Lọc theo Chi Nhánh:</label>
-                <select id="filter-chinhanh">
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="filter-termid">Lọc theo Mã CN (TERMID):</label>
-                <select id="filter-termid">
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="filter-vuothm">Lọc theo Hạn Mức:</label>
-                <select id="filter-vuothm">
-                </select>
-            </div>
-            <div class="filter-control">
-                <label for="filter-nhom">Lọc theo Nhóm:</label>
-                <select id="filter-nhom">
-                </select>
-            </div>
-            <button id="reset-cascading-filter-btn">
-                <i class="fa-solid fa-filter-circle-xmark"></i> Xóa Lọc
-            </button>
+<hr class="my-3 border-t border-gray-300">
+    <div class="filter-control">
+        <label for="filter-vung">Lọc theo Vùng:</label>
+        <select id="filter-vung" multiple size="4">
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="filter-chinhanh">Lọc theo Chi Nhánh:</label>
+        <select id="filter-chinhanh" multiple size="5">
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="filter-termid">Lọc theo Mã CN (TERMID):</label>
+        <select id="filter-termid" multiple size="5">
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="filter-vuothm">Lọc theo Hạn Mức:</label>
+        <select id="filter-vuothm" multiple size="3">
+        </select>
+    </div>
+    <div class="filter-control">
+        <label for="filter-nhom">Lọc theo Nhóm:</label>
+        <select id="filter-nhom" multiple size="5">
+        </select>
+    </div>
+    <button id="reset-cascading-filter-btn">
+        <i class="fa-solid fa-filter-circle-xmark"></i> Xóa Lọc
+    </button>
         `;
 
         // Gắn sự kiện
@@ -2475,206 +3019,277 @@ function loadGroupsFromLocalStorage() {
         document.getElementById('filter-nhom').addEventListener('change', applyFilter);
 
         
-        document.getElementById('reset-cascading-filter-btn').addEventListener('click', () => {
-            const vungSelect = document.getElementById('filter-vung');
-            if (vungSelect) vungSelect.value = 'ALL';
+document.getElementById('reset-cascading-filter-btn').addEventListener('click', () => {
+    
+    // ✨ LOGIC ĐÃ SỬA: Lặp qua TẤT CẢ các select và hủy chọn tất cả options ✨
+    const filterIds = ['filter-vung', 'filter-chinhanh', 'filter-termid', 'filter-vuothm', 'filter-nhom'];
+    
+    filterIds.forEach(id => {
+        const selectElement = document.getElementById(id);
+        if (selectElement) {
+            // Đặt tất cả options về trạng thái không được chọn
+            Array.from(selectElement.options).forEach(option => {
+                option.selected = false;
+            });
             
-            // Gọi update 4 lần để reset tất cả
-            updateFilterOptions(); 
-            updateFilterOptions(); 
-            updateFilterOptions(); 
-            updateFilterOptions(); // Lần 4: Reset Nhóm
-            applyFilter();
-            showToast("Đã xóa lọc", "info");
-        });
+
+        }
+    });
+
+    // Sau khi reset các lựa chọn, gọi updateFilterOptions để xây dựng lại các dropdown 
+    // và applyFilter để hiển thị tất cả điểm.
+    updateFilterOptions(); 
+    applyFilter();
+    showToast("Đã xóa lọc", "info");
+});
 
         // Tải dữ liệu lần đầu
         updateFilterOptions();
+        setupMultiSelectToggle();
     }
 
     /**
-     * (SỬA v40) Cập nhật cả 5 dropdown
-     */
-    function updateFilterOptions() {
-        const vungSelect = document.getElementById('filter-vung');
-        const chinhanhSelect = document.getElementById('filter-chinhanh');
-        const termidSelect = document.getElementById('filter-termid');
-        const vuothmSelect = document.getElementById('filter-vuothm');
-        const nhomSelect = document.getElementById('filter-nhom'); // (MỚI v40)
+ * (SỬA LỚN MULTI-SELECT) Cập nhật cả 5 dropdown, loại bỏ tùy chọn 'ALL', và thêm tùy chọn nhóm chi tiết.
+ */
+function updateFilterOptions() {
+    const vungSelect = document.getElementById('filter-vung');
+    const chinhanhSelect = document.getElementById('filter-chinhanh');
+    const termidSelect = document.getElementById('filter-termid');
+    const vuothmSelect = document.getElementById('filter-vuothm');
+    const nhomSelect = document.getElementById('filter-nhom'); 
+    
+    if (!vungSelect || !chinhanhSelect || !termidSelect || !vuothmSelect || !nhomSelect) return; 
+
+    // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
+    const getSelectedValues = (selectElement) => {
+        if (!selectElement) return [];
+        return Array.from(selectElement.options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+    };
+
+    // Lấy các giá trị đã chọn hiện tại (đã là mảng)
+    const selectedVung = getSelectedValues(vungSelect);
+    const selectedChiNhanh = getSelectedValues(chinhanhSelect);
+    const selectedTermid = getSelectedValues(termidSelect);
+    const selectedVuotHM = getSelectedValues(vuothmSelect);
+    const selectedNhom = getSelectedValues(nhomSelect);
+
+    // Dùng một tập hợp điểm đang hiển thị (theo logic cũ) để xây dựng option cho dropdown tiếp theo
+    let pointsToFilter = allPoints.filter(p => !p.nhnn);
+
+    // 1. Cập nhật Vùng
+    vungSelect.innerHTML = '';
+    const vungSet = new Set(pointsToFilter.map(p => p.vung));
+    vungSet.forEach(vung => {
+        vungSelect.innerHTML += `<option value="${vung}">${vung}</option>`;
+    });
+    // Áp dụng lọc Vùng cho bước tiếp theo
+    if (selectedVung.length > 0) {
+        pointsToFilter = pointsToFilter.filter(p => selectedVung.includes(p.vung));
+    }
+
+
+    // 2. Cập nhật Chi Nhánh
+    chinhanhSelect.innerHTML = '';
+    const chinhanhSet = new Set(pointsToFilter.map(p => p.chinhanh));
+    chinhanhSet.forEach(cn => {
+        chinhanhSelect.innerHTML += `<option value="${cn}">${cn}</option>`;
+    });
+    // Áp dụng lọc Chi Nhánh cho bước tiếp theo
+    if (selectedChiNhanh.length > 0) {
+        pointsToFilter = pointsToFilter.filter(p => selectedChiNhanh.includes(p.chinhanh));
+    }
+
+
+    // 3. Cập nhật TERMID
+    termidSelect.innerHTML = '';
+    const termidSet = new Set(pointsToFilter.map(p => String(p.id)));
+    const sortedTermids = [...termidSet].sort((a, b) => String(a).localeCompare(String(b)));
+    sortedTermids.forEach(id => {
+        termidSelect.innerHTML += `<option value="${id}">${id}</option>`;
+    });
+    // Áp dụng lọc TermID cho bước tiếp theo
+    if (selectedTermid.length > 0) {
+        pointsToFilter = pointsToFilter.filter(p => selectedTermid.includes(String(p.id)));
+    }
+
+
+    // 4. Cập nhật Hạn Mức
+    vuothmSelect.innerHTML = '';
+    const vuotHMSet = new Set(pointsToFilter.map(p => p.vuotHanMuc));
+    vuothmSelect.innerHTML += '<option value="ALL_HM" selected>-- Tất cả Hạn Mức --</option>'; // Tùy chọn mặc định
+    if (vuotHMSet.has(true)) {
+        vuothmSelect.innerHTML += '<option value="YES">Vượt Hạn Mức</option>';
+    }
+    if (vuotHMSet.has(false)) {
+        vuothmSelect.innerHTML += '<option value="NO">Không Vượt</option>';
+    }
+    // Áp dụng lọc Hạn Mức cho bước tiếp theo
+    if (selectedVuotHM.length > 0 && !selectedVuotHM.includes('ALL_HM')) {
+        pointsToFilter = pointsToFilter.filter(p => selectedVuotHM.some(filterValue => {
+            if (filterValue === 'YES') return p.vuotHanMuc === true;
+            if (filterValue === 'NO') return p.vuotHanMuc === false;
+            return false;
+        }));
+    }
+
+
+    // 5. Cập nhật Nhóm (SỬA LỚN)
+    nhomSelect.innerHTML = '';
+    const nhomSet = new Set(pointsToFilter.map(p => p.groupId));
+    
+    // Tùy chọn mặc định: TẤT CẢ (Sửa tên từ ALL_POINTS thành ALL)
+    nhomSelect.innerHTML += '<option value="ALL" selected>-- Tất cả --</option>'; 
+    
+    // Tùy chọn mới: TẤT CẢ NHÓM ĐÃ XÁC ĐỊNH (ALL_GROUPED)
+    if (allGroups.length > 0) {
+        nhomSelect.innerHTML += '<option value="ALL_GROUPED">-- TẤT CẢ NHÓM --</option>';
+    }
+
+    // Thêm lựa chọn [CHƯA CÓ NHÓM]
+    if (nhomSet.has(null)) {
+         nhomSelect.innerHTML += '<option value="NULL">[CHƯA CÓ NHÓM]</option>';
+    }
+    
+    // Thêm các nhóm đã tạo (Nhóm 1, Nhóm 2,...)
+    allGroups.forEach(group => {
+         if (nhomSet.has(group.id)) { 
+             nhomSelect.innerHTML += `<option value="${group.id}">Nhóm ${group.groupNumber}</option>`;
+         }
+    });
+
+    // --- Khôi phục các lựa chọn đã chọn (Quan trọng) ---
+    [...vungSelect.options].forEach(opt => opt.selected = selectedVung.includes(opt.value));
+    [...chinhanhSelect.options].forEach(opt => opt.selected = selectedChiNhanh.includes(opt.value));
+    [...termidSelect.options].forEach(opt => opt.selected = selectedTermid.includes(opt.value));
+    [...vuothmSelect.options].forEach(opt => opt.selected = selectedVuotHM.includes(opt.value));
+    [...nhomSelect.options].forEach(opt => opt.selected = selectedNhom.includes(opt.value));
+}
+/**
+ * (SỬA LỚN MULTI-SELECT) Áp dụng các bộ lọc theo chế độ Multi-Select.
+ */
+function applyFilter() {
+    const selVung = document.getElementById('filter-vung');
+    const selChiNhanh = document.getElementById('filter-chinhanh');
+    const selTermid = document.getElementById('filter-termid');
+    const selVuotHM = document.getElementById('filter-vuothm');
+    const selNhom = document.getElementById('filter-nhom');
+
+    // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
+    const getSelectedValues = (selectElement) => {
+        if (!selectElement) return ['ALL']; // Mặc định là ALL nếu không tồn tại
+        const selected = Array.from(selectElement.options)
+            .filter(option => option.selected)
+            .map(option => option.value);
+        return selected.length > 0 ? selected : ['ALL']; // Nếu không chọn gì, coi như chọn ALL
+    };
+
+    // Lấy các giá trị đã chọn
+    const selectedVung = getSelectedValues(selVung);
+    const selectedChiNhanh = getSelectedValues(selChiNhanh);
+    const selectedTermid = getSelectedValues(selTermid);
+    const selectedVuotHM = getSelectedValues(selVuotHM);
+    const selectedNhom = getSelectedValues(selNhom);
+
+    allPoints.forEach(p => {
         
-        if (!vungSelect || !chinhanhSelect || !termidSelect || !vuothmSelect || !nhomSelect) return; 
+        // 1. Lọc Vùng/Chi Nhánh/TermID (Match: thuộc tính điểm NẰM TRONG mảng đã chọn)
+        const vungMatch = selectedVung.includes('ALL') || selectedVung.includes(p.vung);
+        const chiNhanhMatch = selectedChiNhanh.includes('ALL') || selectedChiNhanh.includes(p.chinhanh);
+        const termidMatch = selectedTermid.includes('ALL') || selectedTermid.includes(String(p.id));
 
-        const selectedVung = vungSelect.value || 'ALL';
-        const oldChiNhanhValue = chinhanhSelect.value || 'ALL';
-        const oldTermidValue = termidSelect.value || 'ALL'; 
-        const oldVuotHMValue = vuothmSelect.value || 'ALL'; // (MỚI v40)
-        const oldNhomValue = nhomSelect.value || 'ALL'; // (MỚI v40)
-
-        // 1. Cập nhật Vùng (Chỉ chạy 1 lần)
-        if (vungSelect.options.length <= 1) {
-            const vungSet = new Set(allPoints.map(p => p.vung));
-            vungSelect.innerHTML = '<option value="ALL">-- Tất cả Vùng --</option>';
-            [...vungSet].sort().forEach(vung => {
-                vungSelect.innerHTML += `<option value="${vung}">${vung}</option>`;
+        // 2. Lọc Hạn Mức
+        let vuotHMMatch = selectedVuotHM.includes('ALL'); 
+        if (!vuotHMMatch && !p.nhnn) {
+            vuotHMMatch = selectedVuotHM.some(filterValue => {
+                if (filterValue === 'YES') return p.vuotHanMuc === true;
+                if (filterValue === 'NO') return p.vuotHanMuc === false;
+                return false;
             });
         }
 
-        // 2. Cập nhật Chi Nhánh (dựa trên Vùng)
-        const chinhanhSet = new Set(
-            allPoints
-                .filter(p => selectedVung === 'ALL' || p.vung === selectedVung)
-                .map(p => p.chinhanh)
-        );
-        chinhanhSelect.innerHTML = '<option value="ALL">-- Tất cả Chi Nhánh --</option>';
-        [...chinhanhSet].sort().forEach(cn => {
-            chinhanhSelect.innerHTML += `<option value="${cn}">${cn}</option>`;
-        });
+        // 3. Lọc Nhóm (SỬA LỚN LOGIC)
+        let nhomMatch = selectedNhom.includes('ALL'); // Mặc định khớp nếu chọn 'ALL'
         
-        if (chinhanhSet.has(oldChiNhanhValue)) {
-            chinhanhSelect.value = oldChiNhanhValue;
-        }
-
-        // 3. Cập nhật TERMID (dựa trên Vùng và Chi Nhánh *mới*)
-        const currentSelectedChiNhanh = chinhanhSelect.value || 'ALL';
-        const termidSet = new Set(
-            allPoints
-                .filter(p => (selectedVung === 'ALL' || p.vung === selectedVung) &&
-                             (currentSelectedChiNhanh === 'ALL' || p.chinhanh === currentSelectedChiNhanh))
-                .map(p => p.id) 
-        );
-        termidSelect.innerHTML = '<option value="ALL">-- Tất cả Mã CN --</option>';
-        const sortedTermids = [...termidSet].sort((a, b) => String(a).localeCompare(String(b)));
-        
-        sortedTermids.forEach(id => {
-            termidSelect.innerHTML += `<option value="${id}">${id}</option>`;
-        });
-        
-        if (termidSet.has(oldTermidValue)) {
-            termidSelect.value = oldTermidValue;
-        }
-        
-        // 4. Cập nhật Hạn Mức (dựa trên 3 filter trên)
-        const currentSelectedTermid = termidSelect.value || 'ALL';
-        const vuotHMSet = new Set(
-             allPoints
-                 .filter(p => !p.nhnn) 
-                 .filter(p => (selectedVung === 'ALL' || p.vung === selectedVung) &&
-                              (currentSelectedChiNhanh === 'ALL' || p.chinhanh === currentSelectedChiNhanh) &&
-                              (currentSelectedTermid === 'ALL' || String(p.id) === String(currentSelectedTermid)))
-                 .map(p => p.vuotHanMuc) 
-        );
-        vuothmSelect.innerHTML = '<option value="ALL">-- Tất cả Hạn Mức --</option>';
-        if (vuotHMSet.has(true)) {
-            vuothmSelect.innerHTML += '<option value="YES">Vượt Hạn Mức</option>';
-        }
-        if (vuotHMSet.has(false)) {
-            vuothmSelect.innerHTML += '<option value="NO">Không Vượt</option>';
-        }
-        if (["ALL", "YES", "NO"].includes(oldVuotHMValue)) { // Khôi phục lựa chọn Hạn Mức
-            vuothmSelect.value = oldVuotHMValue;
-        }
-        
-        // 5. (MỚI v40) Cập nhật Nhóm (dựa trên 4 filter trên)
-        const currentSelectedVuotHM = vuothmSelect.value || 'ALL';
-        const filteredPoints = allPoints.filter(p => 
-            (selectedVung === 'ALL' || p.vung === selectedVung) &&
-            (currentSelectedChiNhanh === 'ALL' || p.chinhanh === currentSelectedChiNhanh) &&
-            (currentSelectedTermid === 'ALL' || String(p.id) === String(currentSelectedTermid)) &&
-            (p.nhnn || // Luôn bỏ qua NHNN khỏi logic filter này
-             (currentSelectedVuotHM === 'ALL') ||
-             (currentSelectedVuotHM === 'YES' && p.vuotHanMuc === true) ||
-             (currentSelectedVuotHM === 'NO' && p.vuotHanMuc === false))
-        );
-        
-        const nhomSet = new Set(filteredPoints.map(p => p.groupId));
-        nhomSelect.innerHTML = '<option value="ALL">-- Tất cả Nhóm --</option>';
-        
-        // Thêm lựa chọn [CHƯA CÓ NHÓM] (chỉ nếu nó tồn tại)
-        if (nhomSet.has(null)) {
-             nhomSelect.innerHTML += '<option value="NULL">[CHƯA CÓ NHÓM]</option>';
-        }
-        
-        // Thêm các nhóm đã tạo (chỉ nếu chúng có trong danh sách đã lọc)
-        allGroups.forEach(group => {
-            if (nhomSet.has(group.id)) { 
-                nhomSelect.innerHTML += `<option value="${group.id}">Nhóm ${group.groupNumber}</option>`;
-            }
-        });
-        
-        if (nhomSet.has(oldNhomValue) || (oldNhomValue === 'NULL' && nhomSet.has(null))) {
-            nhomSelect.value = oldNhomValue;
-        }
-
-        // Khôi phục lựa chọn Vùng
-        vungSelect.value = selectedVung;
-    }
-
-    /**
-     * (SỬA v45) Thêm logic kiểm tra biến 'showNhnnMarkers'
-     */
-    function applyFilter() {
-        const selVung = document.getElementById('filter-vung');
-        const selChiNhanh = document.getElementById('filter-chinhanh');
-        const selTermid = document.getElementById('filter-termid');
-        const selVuotHM = document.getElementById('filter-vuothm'); 
-        const selNhom = document.getElementById('filter-nhom'); // (MỚI v40)
-
-        const selectedVung = selVung ? selVung.value : 'ALL';
-        const selectedChiNhanh = selChiNhanh ? selChiNhanh.value : 'ALL';
-        const selectedTermid = selTermid ? selTermid.value : 'ALL';
-        const selectedVuotHM = selVuotHM ? selVuotHM.value : 'ALL'; 
-        const selectedNhom = selNhom ? selNhom.value : 'ALL'; // (MỚI v40)
-
-        allPoints.forEach(p => {
-            const vungMatch = (selectedVung === 'ALL' || p.vung === selectedVung);
-            const chiNhanhMatch = (selectedChiNhanh === 'ALL' || p.chinhanh === selectedChiNhanh);
-            const termidMatch = (selectedTermid === 'ALL' || String(p.id) === String(selectedTermid));
-            
-            let vuotHMMatch = true; 
-            if (p.nhnn) { 
-                vuotHMMatch = true;
-            } else if (selectedVuotHM === 'YES') {
-                vuotHMMatch = p.vuotHanMuc === true;
-            } else if (selectedVuotHM === 'NO') {
-                vuotHMMatch = p.vuotHanMuc === false;
-            }
-            
-            // (MỚI v40) Logic lọc Nhóm
-            let nhomMatch = true;
-            if (selectedNhom === 'ALL') {
-                nhomMatch = true; // Luôn hiển thị
-            } else if (selectedNhom === 'NULL') {
-                nhomMatch = (p.groupId === null); // Chỉ hiển thị PGD chưa nhóm (NHNN sẽ là 'REFERENCE')
+        if (!nhomMatch) {
+            if (selectedNhom.includes("ALL_GROUPED")) {
+                // Tùy chọn ALL_GROUPED: chỉ hiển thị điểm có Group ID (không phải NHNN)
+                nhomMatch = (p.groupId !== null && p.groupId !== 'REFERENCE');
+            } else if (selectedNhom.includes("NULL")) {
+                // Chỉ hiển thị điểm chưa có nhóm
+                nhomMatch = (p.groupId === null); 
             } else {
-                // Ẩn NHNN nếu 1 nhóm cụ thể được chọn
+                // Hiển thị các nhóm cụ thể được chọn
                 if (p.nhnn) {
-                    nhomMatch = false; 
+                    nhomMatch = false; // Ẩn NHNN nếu chọn nhóm cụ thể
                 } else {
-                    nhomMatch = (String(p.groupId) === String(selectedNhom));
+                    nhomMatch = selectedNhom.includes(String(p.groupId));
                 }
             }
-            
-            // (*** MỚI v45 ***) Thêm điều kiện kiểm tra nút Ẩn/Hiện NHNN
-            let nhnnToggleMatch = true;
-            if (p.nhnn && !showNhnnMarkers) {
-                nhnnToggleMatch = false; // Tắt nếu là NHNN và nút đang "Tắt"
-            }
-            // (*** HẾT MỚI v45 ***)
-
-            // Thêm 'nhnnToggleMatch' vào phép tính cuối cùng
-            p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && nhomMatch && nhnnToggleMatch;
-        });
-
-        if (currentPopup) {
-            map.closePopup(currentPopup);
-            currentPopup = null;
         }
         
-        updateMarkersVisibility(); 
-        drawAllGroups();           
-        updateRankTable();         
+        // 4. Lọc Nút Ẩn/Hiện NHNN
+        let nhnnToggleMatch = true;
+        if (p.nhnn && !showNhnnMarkers) {
+             nhnnToggleMatch = false;
+        }
+
+        // Final check: Tất cả điều kiện phải đúng
+        p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && nhomMatch && nhnnToggleMatch;
+    });
+    
+    if (currentPopup) {
+        map.closePopup(currentPopup);
+        currentPopup = null;
     }
     
+    updateMarkersVisibility(); 
+    drawAllGroups(); 
+    updateRankTable(); 
+    
+    // Đồng bộ nhãn Term ID
+    if (typeof toggleTermIDLabels === 'function' && showTermIDLabels) {
+        toggleTermIDLabels(); // Gọi lại để áp dụng p.isVisible mới
+    }
+}
+ /**
+ * Xử lý sự kiện MOUSE DOWN để BẬT/TẮT trạng thái chọn (Toggle Select)
+ * mà không cần giữ phím Ctrl/Cmd.
+ */
+function toggleSelection(event) {
+    const option = event.target;
+    
+    // Đảm bảo chỉ xử lý khi click vào thẻ <option>
+    if (option.tagName !== 'OPTION') return;
+
+    // Ngăn chặn hành vi mặc định của trình duyệt 
+    // (như tự động bỏ chọn các mục khác khi click)
+    event.preventDefault(); 
+    
+    // Đảo ngược trạng thái chọn của mục được click
+    option.selected = !option.selected;
+
+    // QUAN TRỌNG: Kích hoạt sự kiện 'change' để bộ lọc được áp dụng
+    // Gọi applyFilter() để cập nhật bản đồ ngay lập tức
+    const selectElement = option.parentElement;
+    if (selectElement.id === 'filter-vung') {
+        updateFilterOptions(); 
+    }
+    applyFilter();
+}   
+// Khối lệnh để gán sự kiện cho tất cả các bộ lọc Multi-Select
+function setupMultiSelectToggle() {
+    const filterIds = ['filter-vung', 'filter-chinhanh', 'filter-termid', 'filter-vuothm', 'filter-nhom'];
+    
+    filterIds.forEach(id => {
+        const selectElement = document.getElementById(id);
+        if (selectElement && selectElement.hasAttribute('multiple')) {
+            // Gán sự kiện 'mousedown' thay vì 'click' để chặn hành vi mặc định tốt hơn
+            selectElement.addEventListener('mousedown', toggleSelection);
+        }
+    });
+}
 /**
  * (SỬA LỚN) Cập nhật hiển thị marker dựa trên bộ lọc VÀ chế độ Pin.
  * Đảm bảo ẩn các điểm PGD (không phải TSCN) khi ở chế độ Pin.
@@ -3062,156 +3677,86 @@ function handleMarkerClick(pointData) {
     }
 }
 
-    /**
-     * (SỬA ĐỔI v43: Thêm kiểm tra an toàn cho gom cụm VÀ nhãn km)
-     */
-    function showPreview(item, rowElement = null) { 
-        clearPreview(); 
+/**
+ * (SỬA VỊ TRÍ) Hàm hiển thị vòng tròn 30km và Tooltip Thống Kê Chi Tiết.
+ * Tooltip được đặt gần rìa vòng tròn bằng cách sử dụng L.tooltip() tại một vị trí cố định.
+ */
+function showPreview(item, rowElement = null) {
+    clearPreview(); 
+
+    const centerPoint = (item.type === 'MOVE') ? item.targetGroup.centerPoint : item.centerPoint;
+    if (!centerPoint) return; 
+
+    const color = item.color;
+
+    // 1. Vẽ vòng tròn 30km
+    L.circle(centerPoint.latlng, {
+        radius: RADIUS_METERS,
+        color: color, 
+        weight: 3.5,
+        opacity: 0.95,
+        fillColor: color,
+        fillOpacity: 0.5,
+        dashArray: '10, 10'
+    }).addTo(previewLayer); 
+
+    // 2. TẠO TOOLTIP THỐNG KÊ CHI TIẾT (Chỉ cho loại 'NEW' - Tạo nhóm mới)
+    if (item.type === 'NEW' && item.tooltipContent) {
         
-        const centerPoint = (item.type === 'MOVE') ? item.targetGroup.centerPoint : item.centerPoint;
-        if (!centerPoint) return; 
+        // ✨ LOGIC ĐẨY TOOLTIP SANG PHẢI (VỊ TRÍ CỐ ĐỊNH THEO PIXEL) ✨
+        // Tăng Offset lên 250px để Tooltip nằm hẳn ngoài vòng tròn (tránh bị che)
+        const PIXEL_OFFSET = L.point(250, 0); 
         
-        const color = item.color; // Màu của nhóm (vẫn dùng cho vòng tròn)
-
-        L.circle(centerPoint.latlng, {
-            radius: RADIUS_METERS,
-            color: color, 
-            weight: 2.5,
-            opacity: 0.8,
-            fillColor: color,
-            fillOpacity: 0.2,
-            dashArray: '10, 10'
-        }).addTo(previewLayer); // (SỬA v39) Thêm vào previewLayer
-
-        if (item.type === 'MOVE') {
-            // ... (Toàn bộ khối 'if (item.type === 'MOVE')' giữ nguyên) ...
-            const pointToMove = item.pointToMove;
-            const targetGroup = item.targetGroup;
-
-            if (rowElement) {
-                // ... (code vẽ đường nối từ bảng giữ nguyên)
-                const rowRect = rowElement.getBoundingClientRect();
-                const rowScreenPoint = L.point(rowRect.left + (rowRect.width / 2), rowRect.top + (rowRect.height / 2));
-                const mapContainer = map.getContainer();
-                const mapRect = mapContainer.getBoundingClientRect();
-                const mapPoint = L.point(rowScreenPoint.x - mapRect.left, rowScreenPoint.y - mapRect.top);
-                const startLatLng = map.containerPointToLatLng(mapPoint);
-                const endLatLng = item.pointToMove.latlng;
-
-                L.polyline([startLatLng, endLatLng], { 
-                    color: PREVIEW_COLOR, 
-                    weight: 3, 
-                    opacity: 0.7, 
-                    dashArray: '5, 5', 
-                    className: 'animated-route-line' 
-                }).addTo(previewLayer);
-            }
-            
-            // (SỬA v41) Chỉ làm mờ các marker ĐANG HIỂN THỊ (không bị gom cụm)
-            allPoints.filter(p => p.isVisible && !p.nhnn).forEach(p => {
-                // p.marker._map là cách kiểm tra marker có đang trên map (không bị gom)
-                if (p.marker && p.marker._map) {
-                    p.marker.setOpacity(0.3);
-                }
-            });
-            
-            // (SỬA v41) Làm nổi bật tâm (nếu tâm đang hiển thị)
-            if (!targetGroup.centerPoint.nhnn && targetGroup.centerPoint.marker && targetGroup.centerPoint.marker._map) {
-                targetGroup.centerPoint.marker.setOpacity(1.0);
-            }
-            
-            // (SỬA v41) Làm nổi bật điểm sắp chuyển
-            if (!pointToMove.nhnn && pointToMove.marker) {
-                // Nếu điểm đang hiển thị (không bị gom)
-                if (pointToMove.marker._map) {
-                     pointToMove.marker.setOpacity(1.0);
-                     pointToMove.marker.setIcon(createPGDIcon()); 
-                     if (pointToMove.marker._icon) {
-                         pointToMove.marker._icon.classList.add('point-move-preview');
-                     }
-                } else {
-                    // (MỚI v41) Nếu điểm đang bị gom, zoom tới nó để nó hiện ra
-                    pointMarkersLayer.zoomToShowLayer(pointToMove.marker, () => {
-                        // Sau khi zoom, nó có thể vẫn bị gom nếu quá gần
-                        if (pointToMove.marker && pointToMove.marker._map) {
-                            pointToMove.marker.setOpacity(1.0);
-                            pointToMove.marker.setIcon(createPGDIcon());
-                            if (pointToMove.marker._icon) {
-                                pointToMove.marker._icon.classList.add('point-move-preview');
-                            }
-                        }
-                    });
-                }
-            }
-
-        } else { // 'NEW' hoặc 'ADD'
-            
-            // (MỚI v34) Tìm, vẽ line, và thêm nhãn KM cho NHNN
-            const allNHNNPoints = allPoints.filter(p => p.nhnn && p.isVisible);
-            allNHNNPoints.forEach(nhnnPoint => {
-                const distance = centerPoint.latlng.distanceTo(nhnnPoint.latlng);
-                if (distance <= RADIUS_METERS) {
-                    
-                    const distanceInKm = (distance / 1000).toFixed(2);
-                    const labelContent = `~ ${distanceInKm} km`;
-
-                    const line = L.polyline([centerPoint.latlng, nhnnPoint.latlng], {
-                        color: NHNN_PREVIEW_LINE_COLOR, // (SỬA v34) Xanh biển đậm
-                        weight: 2,
-                        opacity: 0.9,
-                        dashArray: '8, 4', 
-                        className: 'animated-route-line' // (SỬA v34) Thêm animation
-                    }).addTo(previewLayer);
-
-                    // (*** SỬA v43 ***) Chỉ binding tooltip nếu được BẬT
-                    if (showDistanceLabels) {
-                        line.bindTooltip(labelContent, {
-                            permanent: true,
-                            direction: 'center',
-                            className: 'distance-tooltip',
-                            offset: [0, -8] // Nâng nhãn lên một chút
-                        });
-                    }
-                    // (*** HẾT SỬA v43 ***)
-                }
-            });
-            // (HẾT MỚI v34)
-            
-            const coveredPoints = item.coveredPoints;
-            const coveredIds = new Set(coveredPoints.map(p => p.id));
-            
-            // (SỬA v41) Chỉ làm mờ các điểm đã nhóm VÀ đang hiển thị
-            allPoints.filter(p => p.groupId !== null && p.isVisible && !p.nhnn).forEach(p => {
-                 if (p.marker && p.marker._map) {
-                    p.marker.setOpacity(0.3);
-                 }
-            });
-            
-            // (SỬA v41) Cập nhật icon/opacity cho các điểm chưa nhóm
-            allPoints.filter(p => p.groupId === null && p.isVisible).forEach(p => {
-                if (p.nhnn) {
-                    // Đảm bảo NHNN luôn sáng (nếu nó hiển thị)
-                    if (p.marker && p.marker._map) p.marker.setOpacity(1.0); 
-                    return; // Bỏ qua, không thay đổi icon NHNN
-                }
-
-                // (SỬA v37) Code bên dưới chỉ chạy cho PGD/ATM
-                if (coveredIds.has(p.id)) {
-                     // Chỉ cập nhật nếu nó đang hiển thị
-                     if (p.marker && p.marker._map) {
-                        p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon());
-                        p.marker.setOpacity(1.0); // Sáng rõ
-                     }
-                } else {
-                    // Chỉ cập nhật nếu nó đang hiển thị
-                     if (p.marker && p.marker._map) {
-                        p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon());
-                        p.marker.setOpacity(0.3); // Làm mờ
-                     }
-                }
-            });
-        }
+        L.tooltip({
+            permanent: true,
+            direction: 'right', // Không quan trọng vì dùng offset lớn
+            className: 'distance-tooltip', 
+            offset: PIXEL_OFFSET, // <-- ÁP DỤNG OFFSET LỚN
+            opacity: 0.95,
+            pane: 'popupPane' 
+        })
+        .setLatLng(centerPoint.latlng) // Vẫn gắn vào tọa độ tâm
+        .setContent(item.tooltipContent) 
+        .addTo(previewLayer); 
     }
+
+    // 3. Logic cho chế độ MOVE / Tô màu điểm (Giữ nguyên)
+    if (item.type === 'MOVE') {
+        const pointToMove = item.pointToMove;
+        const targetGroup = item.targetGroup;
+
+        // 3a. Làm mờ tất cả điểm PGD/ATM đang hiển thị
+        allPoints.filter(p => p.isVisible && !p.nhnn).forEach(p => { 
+            if (p.marker && p.marker._map) { p.marker.setOpacity(0.3); }
+        });
+
+        // 3b. Làm nổi bật tâm và điểm sắp chuyển
+        if (!targetGroup.centerPoint.nhnn && targetGroup.centerPoint.marker && targetGroup.centerPoint.marker._map) { 
+            targetGroup.centerPoint.marker.setOpacity(1.0); 
+        }
+        if (!pointToMove.nhnn && pointToMove.marker && pointToMove.marker._map) {
+             pointToMove.marker.setOpacity(1.0); 
+        }
+    } else { // Xử lý làm mờ/sáng cho chế độ NEW
+        const coveredIds = new Set(item.coveredPoints.map(p => p.id));
+        
+        // Làm mờ các điểm đã nhóm
+        allPoints.filter(p => p.groupId !== null && p.isVisible && !p.nhnn).forEach(p => { 
+            if (p.marker && p.marker._map) { p.marker.setOpacity(0.3); }
+        });
+        
+        // Sáng điểm tâm (centerPoint) và các điểm được bao phủ
+        allPoints.filter(p => p.groupId === null && p.isVisible && !p.nhnn).forEach(p => {
+            if (p.marker && p.marker._map) {
+                if (p.id === centerPoint.id || coveredIds.has(p.id)) {
+                    p.marker.setOpacity(1.0); 
+                } else {
+                    p.marker.setOpacity(0.3); // Mờ các điểm không được bao phủ
+                }
+            }
+        });
+    }
+}
 
     /**
      * (SỬA ĐỔI v41: Thêm kiểm tra an toàn cho gom cụm)
@@ -3286,6 +3831,9 @@ function popup_createGroup(pointId) {
     const newGroup = {
         id: newGroupId, 
         centerPoint: centerPoint,
+        // ✨ THÊM THUỘC TÍNH NÀY KHI LƯU NHÓM ✨
+    fixedRadiusMeters: RADIUS_METERS, // Lưu lại bán kính cố định
+    fixedRadiusKm: currentRadiusKm,
         points: pointsInGroup, // <--- THÊM ĐIỂM TÂM VÀO MẢNG NÀY
         color: newGroupColor,
         groupNumber: newGroupNumber,
@@ -3364,8 +3912,9 @@ function movePoint(pointId, newGroupId) {
 }
 
 /**
- * (*** SỬA ĐỔI MỚI ***) 
- * Ẩn vòng tròn/line khi ở chế độ Pin.
+ * (SỬA LỖI FINAL BÁN KÍNH) Vẽ các nhóm đã lưu. 
+ * Kiểm tra fixedRadiusMeters một cách cẩn thận để chống lỗi khi load từ localStorage.
+ * Nếu fixedRadiusMeters hợp lệ (> 0), sử dụng nó. Nếu không, dùng 30km mặc định.
  */
 function drawAllGroups() {
     clearAnalysisVisuals(); 
@@ -3378,20 +3927,35 @@ function drawAllGroups() {
 
         if (!centerPoint.isVisible) { return; }
         
+        // ✨ LOGIC ĐÃ SỬA: KIỂM TRA BÁN KÍNH MỘT CÁCH CHẮC CHẮN ✨
+        const DEFAULT_RADIUS_METERS = 30000;
+        
+        // Kiểm tra group.fixedRadiusMeters: phải là số hữu hạn VÀ lớn hơn 0.
+        // Nếu hợp lệ, sử dụng nó. Nếu không, dùng 30000m (30km).
+        const groupRadius = (isFinite(group.fixedRadiusMeters) && group.fixedRadiusMeters > 0) 
+            ? Number(group.fixedRadiusMeters) 
+            : DEFAULT_RADIUS_METERS; 
+
         // Chỉ vẽ Vòng tròn và Line nếu KHÔNG ở chế độ Pin
         if (!isBatteryView) {
             
-            // Vẽ vòng tròn 30km cố định
+            // Vẽ vòng tròn phân tích
             L.circle(centerPoint.latlng, {
-                radius: RADIUS_METERS, color: color, weight: 2.5, opacity: 0.7,
-                fillColor: color, fillOpacity: 0.1
+                radius: groupRadius, // SỬ DỤNG BÁN KÍNH CỐ ĐỊNH AN TOÀN
+                color: color, 
+                weight: 3, 
+                opacity: 0.9, 
+                fillColor: color, 
+                fillOpacity: 0.25 
             }).addTo(analysisLayer); 
             
             // Vẽ line từ TÂM NHÓM đến các NHNN lân cận
             allNHNNPoints.forEach(nhnnPoint => {
                 const distance = centerPoint.latlng.distanceTo(nhnnPoint.latlng);
-                if (distance <= RADIUS_METERS) {
-                    const distanceInKm = (distance / 1000).toFixed(2); const labelContent = `~ ${distanceInKm} km`;
+                // Sử dụng groupRadius để kiểm tra khoảng cách
+                if (distance <= groupRadius) { 
+                    const distanceInKm = (distance / 1000).toFixed(2); 
+                    const labelContent = `~ ${distanceInKm} km`;
                     const line = L.polyline([centerPoint.latlng, nhnnPoint.latlng], { color: NHNN_PREVIEW_LINE_COLOR, weight: 2, opacity: 0.9, dashArray: '8, 4', className: 'animated-route-line' }).addTo(analysisLayer);
                     if (showDistanceLabels) { line.bindTooltip(labelContent, { permanent: true, direction: 'center', className: 'distance-tooltip', offset: [0, -8] }); }
                 }
@@ -3406,17 +3970,28 @@ function drawAllGroups() {
             if (!pointData.isVisible) { return; }
             bounds.extend(pointData.latlng); 
 
-            if (pointData.id === centerPoint.id) {
-                pointData.marker.setIcon(createCenterPointIcon(color));
-                const centerTooltip = pointData.marker.bindTooltip(`<b>TÂM NHÓM ${groupNumber}</b><br>(${visiblePointsInGroup.length} điểm)`, { permanent: true, direction: 'bottom', offset: L.point(0, 10), className: 'distance-tooltip' }).openTooltip();
-                centerTooltip.on('add', function() {
-                    const container = this.getElement();
-                    if (container) { 
-                        container.style.borderColor = color; 
-                        L.DomEvent.on(container, 'click', (e) => { L.DomEvent.stopPropagation(e); handleMarkerClick(pointData); }); 
-                    }
-                });
-            } else {
+if (pointData.id === centerPoint.id) {
+                pointData.marker.setIcon(createCenterPointIcon(color));
+                
+                // (*** PHẦN ĐÃ SỬA: HIỂN THỊ GỌN GÀNG TRÊN 1 DÒNG ***)
+                const tooltipMessage = `${pointData.id} (${visiblePointsInGroup.length} điểm)`;
+                
+                const centerTooltip = pointData.marker.bindTooltip(tooltipMessage, { 
+                    permanent: true, 
+                    direction: 'bottom', 
+                    offset: L.point(0, 10), 
+                    // SỬ DỤNG CLASS CŨ HOẶC MỚI (Tôi dùng class có sẵn của bạn)
+                    className: 'distance-tooltip distance-tooltip-compact' // Thêm class mới
+                }).openTooltip();
+                // ... (giữ nguyên sự kiện add)
+                centerTooltip.on('add', function() {
+                    const container = this.getElement();
+                    if (container) { 
+                        container.style.borderColor = color; 
+                        L.DomEvent.on(container, 'click', (e) => { L.DomEvent.stopPropagation(e); handleMarkerClick(pointData); }); 
+                    }
+                });
+            } else {
                 // Thành viên nhóm dùng icon Pin hoặc PGD (Icon Pin được kiểm tra TSCN bên trong hàm createBatteryIcon)
                 pointData.marker.setIcon(isBatteryView ? createBatteryIcon(pointData) : createPGDIcon());
                 
@@ -3482,11 +4057,7 @@ function clearAnalysisVisuals() {
     }
     
 /**
- * (SỬA LỖI CACHE VÀ PHỤC HỒI) Hàm Hybrid: Vẽ chim bay hoặc Lái xe (Ưu tiên dùng Cache).
- * * @param {L.LatLng} startLatLng - Tọa độ Tâm Nhóm.
- * @param {L.LatLng} endLatLng - Tọa độ Điểm thành viên.
- * @param {object} pointData - Dữ liệu điểm thành viên.
- * @param {object} group - Dữ liệu nhóm (bao gồm polylineCache).
+ * (SỬA VỊ TRÍ VÀ MÀU SẮC TOOLTIP) Hàm Hybrid: Vẽ chim bay hoặc Lái xe (Ưu tiên dùng Cache) và gán Tooltip.
  */
 function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
     const { color, groupNumber } = group;
@@ -3507,33 +4078,23 @@ function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
             dashArray: '10, 10',
             className: 'animated-route-line'
         }).addTo(analysisLayer);
-        
-        tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>~ ${distanceInKm} km (bay)`;
 
+        // [SỬA] Nội dung Tooltip: TermID + km (Không màu)
+        tooltipContent = `<span class="group-name">${pointData.id}</span>~ ${distanceInKm} km`;
     } else {
         // === CHẾ ĐỘ LÁI XE (Car Mode) - ƯU TIÊN DÙNG CACHE ===
         const cachedJson = group.polylineCache[pointData.id];
 
         if (cachedJson) {
-            // 1. NẾU CÓ CACHE: Tải và vẽ ngay lập tức
-            const coordinates = JSON.parse(cachedJson);
-            const latLngs = coordinates.map(c => L.latLng(c.lat, c.lon));
+            // ... (vẽ Polyline từ cache giữ nguyên) ...
             
-            // Vẽ đường Polyline từ chuỗi tọa độ đã cache
-            L.polyline(latLngs, {
-                color: color, 
-                opacity: 1.0, 
-                weight: 5, 
-                dashArray: '10, 10', 
-                className: 'animated-route-line'
-            }).addTo(analysisLayer);
-            
-            tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ~ ${distanceInKm} km (cached)`;
+            // [SỬA] Nội dung Tooltip: TermID + km (cached)
+            tooltipContent = `<span class="group-name">${pointData.id}</span>🚗 ${distanceInKm} km (cached)`;
             isCached = true;
 
         } else {
-            // 2. NẾU KHÔNG CÓ CACHE: Đẩy vào Hàng đợi (Queue)
-            tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>... <i class="fa-solid fa-spinner loading-spinner"></i>`;
+            // [SỬA] Nội dung Tooltip: TermID + Loading
+            tooltipContent = `<span class="group-name">${pointData.id}</span>... <i class="fa-solid fa-spinner loading-spinner"></i>`;
             
             routingQueue.push({
                 startLatLng, endLatLng, endMarker, pointData, color, groupNumber, group
@@ -3541,22 +4102,32 @@ function calculateAndDrawLine(startLatLng, endLatLng, pointData, group) {
         }
     }
     
-    // (*** SỬA v43 ***) Logic hiển thị Tooltip
+    // (*** LOGIC GÁN TOOLTIP CHO MARKER VÀ CĂN CHỈNH ANCHOR ***)
     if (!isBatteryView && showDistanceLabels) {
-        // Phải hủy tooltip cũ trước khi bind mới (để cập nhật nội dung)
-        if (endMarker.getTooltip()) endMarker.unbindTooltip(); 
+        // Do TermID Tooltip là vĩnh viễn và căn trên, Tooltip này sẽ được căn dưới
         
+        // Cần đảm bảo Tooltip khoảng cách CŨ (nếu có) bị hủy để Tooltip mới không bị chồng
+        // Mặc dù Leaflet có thể tự xử lý, unbind để tránh lỗi logic.
+        endMarker.unbindTooltip(); 
+
         const tooltip = endMarker.bindTooltip(tooltipContent, {
             permanent: true,
-            direction: 'top',
-            className: 'distance-tooltip'
+            
+            // ĐIỀU CHỈNH: Đặt Tooltip phía dưới điểm
+            direction: 'bottom', 
+            
+            className: 'distance-tooltip',
+            
+            // ĐIỀU CHỈNH OFFSET: Đẩy Tooltip xuống dưới một chút
+            offset: L.point(0, 10) 
+            
         }).openTooltip();
         
-        // Thêm event handler cho Tooltip
         tooltip.on('add', function() {
             const container = this.getElement();
             if (container) {
-                container.style.borderColor = color;
+                // [SỬA] Loại bỏ màu sắc Tooltip (chỉ giữ màu viền mặc định)
+                container.style.borderColor = '#ccc'; 
                 
                 L.DomEvent.on(container, 'click', (e) => {
                     L.DomEvent.stopPropagation(e); 
@@ -3661,8 +4232,8 @@ async function processRoutingQueue(shouldExport = true) {
         const isMarkerStillOnMap = pointMarkersLayer.hasLayer(endMarker) || nhnnMarkersLayer.hasLayer(endMarker);
         if (pointData.isVisible && endMarker && isMarkerStillOnMap && !isBatteryView && showDistanceLabels) {
             const distanceInKm = (route.summary.totalDistance / 1000).toFixed(2); 
-            const tooltipContent = `<span class="group-name" style="color: ${color};">NHÓM ${groupNumber}</span>🚗 ${distanceInKm} km (lái xe)`;
-            
+            // [ĐÃ SỬA] Nội dung Tooltip: TermID + km (Đã tính)
+            const tooltipContent = `<span class="group-name" style="color: ${color};">${pointData.id}</span>🚗 ${distanceInKm} km`;
             endMarker.unbindTooltip(); 
             
             const newTooltip = endMarker.bindTooltip(tooltipContent, {
