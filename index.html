@@ -1435,7 +1435,7 @@ function createTopHubGroups(hubCount = 22) {
             
             if (isCreated) {
                  createdCount++;
-                 console.log(`[HUB LOG] ✅ TẠO THÀNH CÔNG: ${centerId} (${createdCount}/${topCandidatesIds.length})`);
+                
             }
         }
         
@@ -1850,67 +1850,34 @@ function renderProposalList() {
 
         });
 
-        /**
-        
-         * [ĐÃ SỬA LỖI TUÂN THỦ FILTER] Hàm bật/tắt hiển thị Term ID Label.
-        
-         * Nhãn chỉ hiển thị khi showTermIDLabels = true VÀ p.isVisible = true.
-        
-         */
+/**
+ * [FINAL FIX LỖI NÚT] Hàm bật/tắt hiển thị Term ID Label (CHỈ XỬ LÝ TOOLTIP/NÚT UI).
+ * Lệnh gọi applyFilter() đã được chuyển ra ngoài sự kiện onclick.
+ */
+function toggleTermIDLabels() {
+    const button = document.getElementById('termid-toggle-btn');
+    if (!button) return;
 
-        function toggleTermIDLabels() {
+    // Đảo trạng thái (chỉ thay đổi trạng thái nút)
+    showTermIDLabels = !showTermIDLabels; 
 
-            const button = document.getElementById('termid-toggle-btn');
+    // 1. Cập nhật giao diện nút
+    if (showTermIDLabels) {
+        button.style.cssText = 'background-color: #3b82f6 !important; color: white !important;'; 
+        button.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">TermID (Bật)</span>';
+        showToast("Đã BẬT: Hiển thị Term ID", 'info');
+    } else {
+        button.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>';
+        button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
+        showToast("Đã TẮT: Ẩn Term ID", 'warning');
+    }
 
-            if (!button) return;
-            // Đảo trạng thái (chỉ thay đổi trạng thái nút, không nhất thiết phải ẩn/hiện ngay)
-
-            showTermIDLabels = !showTermIDLabels;
-            // 1. Cập nhật giao diện nút
-
-            if (showTermIDLabels) {
-
-                button.style.cssText = 'background-color: #3b82f6 !important; color: white !important;';
-
-                button.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">TermID (Bật)</span>';
-
-                showToast("Đã BẬT: Hiển thị Term ID", 'info');
-
-            } else {
-
-                button.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>';
-
-                button.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
-
-                showToast("Đã TẮT: Ẩn Term ID", 'warning');
-
-            }
-            // 2. Lặp qua TẤT CẢ các điểm để đồng bộ trạng thái hiển thị nhãn
-
-            allPoints.forEach(p => {
-
-                if (p.nhnn) return; // Bỏ qua NHNN hoặc xử lý riêng nếu cần
-                const tooltip = p.termIDTooltip;
-
-                if (tooltip) {
-
-                    // ✨ LOGIC TUÂN THỦ FILTER: Chỉ hiện khi TermID đang BẬT VÀ điểm đang HIỂN THỊ (isVisible) ✨
-
-                    if (showTermIDLabels && p.isVisible) {
-
-                        tooltip.openOn(map);
-
-                    } else {
-
-                        map.closeTooltip(tooltip);
-
-                    }
-
-                }
-
-            });
-
-        }
+    // 2. Kích hoạt vẽ lại và đồng bộ nhãn
+    updateMarkersVisibility(); 
+    drawAllGroups();
+    
+    // Lưu ý: Lệnh gọi applyFilter() phải được đặt trên nút TermID.
+}
 
         /**
         
@@ -3051,7 +3018,8 @@ function removeProposal(pointId) {
 
         let isSearchPanelOpen = false;
 
-        let showTermIDLabels = true;
+        let showTermIDLabels = false;
+        const PREVIEW_FADE_OPACITY = 0.3; // ✨ KHAI BÁO MỚI (FIX ReferenceError)
 
         let isOptimizationResultVisible = false; // ✨ MỚI: Theo dõi trạng thái vòng tròn tối ưu
 
@@ -3644,23 +3612,20 @@ autoGroupButton.onclick = (e) => {
 
                 };
 
-                // Nút Bật/Tắt TermID Labels
+// Nút Bật/Tắt TermID Labels
+const termIDToggleBtn = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+termIDToggleBtn.id = 'termid-toggle-btn';
 
-                const termIDToggleBtn = L.DomUtil.create('button', 'leaflet-bar-part rounded-lg', buttonsWrapper);
+// ✨ THAY THẾ CSS VÀ HTML CỦA NÚT THÀNH TRẠNG THÁI 'Tắt' MẶC ĐỊNH ✨
+termIDToggleBtn.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;'; 
+termIDToggleBtn.innerHTML = '<i class="fa-solid fa-tag-slash w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>'; 
+// Lưu ý: Đã đổi 'tag' sang 'tag-slash' và 'TermID (Bật)' sang 'TermID (Tắt)'
 
-                termIDToggleBtn.id = 'termid-toggle-btn';
-
-                termIDToggleBtn.style.cssText = 'background-color: #f3f4f6 !important; color: #4b5563 !important;';
-
-                termIDToggleBtn.innerHTML = '<i class="fa-solid fa-tag w-4 h-4"></i> <span class="button-text">TermID (Tắt)</span>';
-
-                termIDToggleBtn.onclick = (e) => {
-
-                    L.DomEvent.stopPropagation(e);
-
-                    toggleTermIDLabels(); // Gọi hàm bật/tắt
-
-                };
+termIDToggleBtn.onclick = (e) => {
+    L.DomEvent.stopPropagation(e);
+    toggleTermIDLabels(); 
+    applyFilter(); 
+};
 
                 // Nút Routing
 
@@ -3853,10 +3818,6 @@ autoGroupButton.onclick = (e) => {
             try {
 
                 localStorage.setItem(LOCAL_STORAGE_KEY, jsonOutput);
-
-                console.log("=== DỮ LIỆU NHÓM ĐÃ LƯU VÀO LOCAL STORAGE ===");
-
-                console.log(JSON.parse(jsonOutput));
 
                 showToast("Đã lưu trạng thái nhóm thành công!", "success");
 
@@ -4186,7 +4147,7 @@ autoGroupButton.onclick = (e) => {
                         const TSCN_KEYWORDS = ["TSCN", "TS CN", "TRU SO CN", "TRU SO CHI NHANH"];
 
                         const PGD_KEYWORDS = ["PGD", "PHONG GD", "PHONG GIAO DICH", "P GIAO DICH"];
-                        console.log(`[PREVIEW LOG START] Bắt đầu phân loại cho Tâm: ${newPointData.id}`);
+
                         for (const pointToTest of ungroupedPoints) {
 
                             if (newPointData.latlng.distanceTo(pointToTest.latlng) <= RADIUS_METERS) {
@@ -4209,7 +4170,7 @@ autoGroupButton.onclick = (e) => {
 
                                         const source = pointToTest.isBatteryPoint ? 'isBatteryPoint' : 'Keyword_ID';
 
-                                        console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 1 (TSCN - ${source}).`);
+                           
 
                                     }
 
@@ -4228,7 +4189,7 @@ autoGroupButton.onclick = (e) => {
 
                                             countedIds.add(pointToTest.id);
 
-                                            console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 2 (PGD - Keyword_ID).`);
+                                 
 
                                         }
 
@@ -4241,7 +4202,7 @@ autoGroupButton.onclick = (e) => {
 
                                     stats.Other++;
 
-                                    console.log(`[PREVIEW LOG] Điểm ${pointToTest.id} [${pointToTest.tenHub}] -> Nhóm 3 (Khác/ATM).`);
+                                  
 
                                 }
 
@@ -4328,48 +4289,32 @@ autoGroupButton.onclick = (e) => {
 
         }
 
-        /**
-    
-         * (*** MỚI v45 ***) Hàm Bật/Tắt hiển thị lớp NHNN
-    
-         */
+/**
+ * (FIX ĐỒNG BỘ TERMID) Hàm Bật/Tắt hiển thị lớp NHNN.
+ */
+function toggleNhnn() {
+    // 1. Đảo ngược trạng thái
+    showNhnnMarkers = !showNhnnMarkers;
+    const button = document.getElementById('nhnn-toggle-btn');
+     
+    if (currentPopup) map.closePopup(currentPopup);
 
-        function toggleNhnn() {
+    // 2. Cập nhật nút
+    if (showNhnnMarkers) {
+        button.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
+        button.classList.add('nhnn-on');
+        button.classList.remove('nhnn-off');
+        showToast("Đã BẬT: Hiển thị NHNN", 'info');
+    } else {
+        button.innerHTML = '<i class="fa-solid fa-eye-slash w-4 h-4"></i> <span class="button-text">Hiện NHNN</span>';
+        button.classList.add('nhnn-off');
+        button.classList.remove('nhnn-on');
+        showToast("Đã TẮT: Ẩn NHNN", 'warning');
+    }
 
-            // 1. Đảo ngược trạng thái
-
-            showNhnnMarkers = !showNhnnMarkers;
-
-            const button = document.getElementById('nhnn-toggle-btn');
-            if (currentPopup) map.closePopup(currentPopup);
-            // 2. Cập nhật nút
-
-            if (showNhnnMarkers) {
-
-                button.innerHTML = '<i class="fa-solid fa-eye w-4 h-4"></i> <span class="button-text">Ẩn NHNN</span>';
-
-                button.classList.add('nhnn-on');
-
-                button.classList.remove('nhnn-off');
-
-                showToast("Đã BẬT: Hiển thị NHNN", 'info');
-
-            } else {
-
-                button.innerHTML = '<i class="fa-solid fa-eye-slash w-4 h-4"></i> <span class="button-text">Hiện NHNN</span>';
-
-                button.classList.add('nhnn-off');
-
-                button.classList.remove('nhnn-on');
-
-                showToast("Đã TẮT: Ẩn NHNN", 'warning');
-
-            }
-            // 3. (QUAN TRỌNG) Gọi lại hàm applyFilter
-
-            applyFilter();
-
-        }
+    // 3. (QUAN TRỌNG) Gọi lại hàm applyFilter
+    applyFilter(); // ✨ Đảm bảo p.isVisible được cập nhật và TermID được đồng bộ ✨
+}
 
         function loadPreloadedData() {
 
@@ -4461,22 +4406,6 @@ autoGroupButton.onclick = (e) => {
                     if (bounds.isValid()) {
 
                         map.fitBounds(bounds.pad(0.1));
-
-                    }
-
-                    // Dòng Sửa Đổi: Buộc Tooltip Term ID phải ẩn nếu trạng thái mặc định là FALSE
-
-                    if (!showTermIDLabels) {
-
-                        toggleTermIDLabels();
-
-                        toggleTermIDLabels(); // Gọi 2 lần để đảm bảo lần gọi đầu tiên ẩn chúng đi
-
-                    } else {
-
-                        // Nếu mặc định là true, chỉ gọi 1 lần để đảm bảo chúng hiện
-
-                        toggleTermIDLabels();
 
                     }
 
@@ -4678,15 +4607,12 @@ autoGroupButton.onclick = (e) => {
             setupMultiSelectToggle();
 
         }
- /**
- * (SỬA LỚN MULTI-SELECT & THÊM FILTER PL_DGD) Cập nhật các dropdown phụ thuộc.
- */
 function updateFilterOptions() {
     const vungSelect = document.getElementById('filter-vung');
     const chinhanhSelect = document.getElementById('filter-chinhanh');
     const termidSelect = document.getElementById('filter-termid');
     const vuothmSelect = document.getElementById('filter-vuothm');
-    const pldgdSelect = document.getElementById('filter-pldgd'); // ✨ MỚI
+    const pldgdSelect = document.getElementById('filter-pldgd'); 
     const nhomSelect = document.getElementById('filter-nhom'); 
     
     if (!vungSelect || !chinhanhSelect || !termidSelect || !vuothmSelect || !pldgdSelect || !nhomSelect) return; 
@@ -4698,18 +4624,14 @@ function updateFilterOptions() {
             .map(option => option.value);
     };
 
-    // Lấy các giá trị đã chọn hiện tại (đã là mảng)
     const selectedVung = getSelectedValues(vungSelect);
     const selectedChiNhanh = getSelectedValues(chinhanhSelect);
     const selectedTermid = getSelectedValues(termidSelect);
     const selectedVuotHM = getSelectedValues(vuothmSelect);
-    const selectedPLDGD = getSelectedValues(pldgdSelect); // ✨ MỚI
+    const selectedPLDGD = getSelectedValues(pldgdSelect); 
     const selectedNhom = getSelectedValues(nhomSelect);
 
     let pointsToFilter = allPoints.filter(p => !p.nhnn);
-
-    // [Logic cập nhật Vùng, Chi Nhánh, TERMID, Hạn Mức (Giữ nguyên)]
-    // ... (logic Vung, Chi Nhánh, TermID) ...
 
     // 1. Cập nhật Vùng
     vungSelect.innerHTML = '';
@@ -4744,7 +4666,7 @@ function updateFilterOptions() {
         }));
     }
 
-    // ✨ 5. Cập nhật PL_DGD (TSCN/PGD/ATM) ✨
+    // 5. Cập nhật PL_DGD (TSCN/PGD/ATM)
     pldgdSelect.innerHTML = '';
     const pldgdSet = new Set(pointsToFilter.map(p => p.isBatteryPoint));
     pldgdSelect.innerHTML += '<option value="ALL_PLDGD" selected>-- Tất cả Loại Điểm --</option>';
@@ -4754,7 +4676,6 @@ function updateFilterOptions() {
     if (pldgdSet.has(false)) {
         pldgdSelect.innerHTML += '<option value="PGD_ATM">Chỉ PGD/ATM</option>';
     }
-    // Áp dụng lọc PL_DGD cho bước tiếp theo
     if (selectedPLDGD.length > 0 && !selectedPLDGD.includes('ALL_PLDGD')) {
         pointsToFilter = pointsToFilter.filter(p => selectedPLDGD.some(filterValue => {
             if (filterValue === 'TSCN') return p.isBatteryPoint === true;
@@ -4787,90 +4708,107 @@ function updateFilterOptions() {
     [...chinhanhSelect.options].forEach(opt => opt.selected = selectedChiNhanh.includes(opt.value));
     [...termidSelect.options].forEach(opt => opt.selected = selectedTermid.includes(opt.value));
     [...vuothmSelect.options].forEach(opt => opt.selected = selectedVuotHM.includes(opt.value));
-    [...pldgdSelect.options].forEach(opt => opt.selected = selectedPLDGD.includes(opt.value)); // ✨ MỚI
+    [...pldgdSelect.options].forEach(opt => opt.selected = selectedPLDGD.includes(opt.value)); 
     [...nhomSelect.options].forEach(opt => opt.selected = selectedNhom.includes(opt.value));
 
-    // Gắn sự kiện `change` cho dropdown PL_DGD
+    // Gắn sự kiện `change` cho dropdown PL_DGD và các dropdown khác (Đã được hợp nhất)
+    vungSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
+    chinhanhSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
+    termidSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
+    vuothmSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
     pldgdSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
+    nhomSelect.onchange = () => { updateFilterOptions(); applyFilter(); };
 }
 
 /**
- * (SỬA LỚN MULTI-SELECT & PL_DGD) Áp dụng các bộ lọc theo chế độ Multi-Select.
+ * (FINAL FIX NHNN TOGGLE + PL_DGD) Áp dụng các bộ lọc theo chế độ Multi-Select.
+ * KHÔNG GỌI toggleTermIDLabels() nữa, để nút TermID tự xử lý.
  */
 function applyFilter() {
     const selVung = document.getElementById('filter-vung');
     const selChiNhanh = document.getElementById('filter-chinhanh');
     const selTermid = document.getElementById('filter-termid');
     const selVuotHM = document.getElementById('filter-vuothm');
-    const selPLDGD = document.getElementById('filter-pldgd'); // ✨ MỚI
+    const selPLDGD = document.getElementById('filter-pldgd'); 
     const selNhom = document.getElementById('filter-nhom');
 
-    // Hàm mới để lấy các giá trị đã chọn (trả về mảng)
     const getSelectedValues = (selectElement) => {
         if (!selectElement) return ['ALL']; 
         const selected = Array.from(selectElement.options)
             .filter(option => option.selected)
             .map(option => option.value);
-        // Nếu không chọn gì VÀ không chọn tùy chọn 'ALL', coi như đã chọn 'ALL'
+
+        if (selectElement.id === 'filter-vuothm' && selected.length === 0) return ['ALL_HM'];
+        if (selectElement.id === 'filter-pldgd' && selected.length === 0) return ['ALL_PLDGD'];
+        if (selectElement.id === 'filter-nhom' && selected.length === 0) return ['ALL'];
+        
         return selected.length > 0 ? selected : ['ALL']; 
     };
 
-    // Lấy các giá trị đã chọn
     const selectedVung = getSelectedValues(selVung);
     const selectedChiNhanh = getSelectedValues(selChiNhanh);
     const selectedTermid = getSelectedValues(selTermid);
     const selectedVuotHM = getSelectedValues(selVuotHM);
-    const selectedPLDGD = getSelectedValues(selPLDGD); // ✨ MỚI
+    const selectedPLDGD = getSelectedValues(selPLDGD); 
     const selectedNhom = getSelectedValues(selNhom);
 
     allPoints.forEach(p => {
         
-        // 1. Lọc Vùng/Chi Nhánh/TermID (Match: thuộc tính điểm NẰM TRONG mảng đã chọn)
+        // 1. Lọc Vùng/Chi Nhánh/TermID
         const vungMatch = selectedVung.includes('ALL') || selectedVung.includes(p.vung);
         const chiNhanhMatch = selectedChiNhanh.includes('ALL') || selectedChiNhanh.includes(p.chinhanh);
         const termidMatch = selectedTermid.includes('ALL') || selectedTermid.includes(String(p.id));
-
-        // 2. Lọc Hạn Mức
-        let vuotHMMatch = selectedVuotHM.includes('ALL'); 
-        if (!vuotHMMatch && !p.nhnn) {
-            vuotHMMatch = selectedVuotHM.some(filterValue => {
-                if (filterValue === 'YES') return p.vuotHanMuc === true;
-                if (filterValue === 'NO') return p.vuotHanMuc === false;
-                return false;
-            });
-        }
         
-        // ✨ 3. Lọc PL_DGD (TSCN/PGD/ATM) ✨
-        let pldgdMatch = selectedPLDGD.includes('ALL_PLDGD'); 
-        if (!pldgdMatch && !p.nhnn) {
-            pldgdMatch = selectedPLDGD.some(filterValue => {
-                if (filterValue === 'TSCN') return p.isBatteryPoint === true;
-                if (filterValue === 'PGD_ATM') return p.isBatteryPoint === false;
-                return false;
-            });
-        }
+        // 2. Lọc Hạn Mức, PL_DGD, Nhóm (Chỉ áp dụng cho PGD/ATM)
+        let vuotHMMatch = true;
+        let pldgdMatch = true;
+        let nhomMatch = true;
 
-        // 4. Lọc Nhóm
-        let nhomMatch = selectedNhom.includes('ALL'); 
-        if (!nhomMatch) {
-            if (selectedNhom.includes("ALL_GROUPED")) {
-                nhomMatch = (p.groupId !== null && p.groupId !== 'REFERENCE');
-            } else if (selectedNhom.includes("NULL")) {
-                nhomMatch = (p.groupId === null); 
-            } else {
-                if (p.nhnn) {
-                    nhomMatch = false; 
+        if (!p.nhnn) {
+            
+            // Lọc Hạn Mức
+            vuotHMMatch = selectedVuotHM.includes('ALL_HM'); 
+            if (!vuotHMMatch) {
+                vuotHMMatch = selectedVuotHM.some(filterValue => {
+                    if (filterValue === 'YES') return p.vuotHanMuc === true;
+                    if (filterValue === 'NO') return p.vuotHanMuc === false;
+                    return false;
+                });
+            }
+            
+            // Lọc PL_DGD
+            pldgdMatch = selectedPLDGD.includes('ALL_PLDGD'); 
+            if (!pldgdMatch) {
+                pldgdMatch = selectedPLDGD.some(filterValue => {
+                    if (filterValue === 'TSCN') return p.isBatteryPoint === true;
+                    if (filterValue === 'PGD_ATM') return p.isBatteryPoint === false;
+                    return false;
+                });
+            }
+
+            // Lọc Nhóm
+            nhomMatch = selectedNhom.includes('ALL'); 
+            if (!nhomMatch) {
+                if (selectedNhom.includes("ALL_GROUPED")) {
+                    nhomMatch = (p.groupId !== null && p.groupId !== 'REFERENCE');
+                } else if (selectedNhom.includes("NULL")) {
+                    nhomMatch = (p.groupId === null); 
                 } else {
                     nhomMatch = selectedNhom.includes(String(p.groupId));
                 }
             }
-        }
+        } 
         
-        // 5. Lọc Nút Ẩn/Hiện NHNN
+        // 3. Lọc Ẩn/Hiện NHNN (FIX LỖI: KHÔNG ẢNH HƯỞNG ĐẾN PGD/ATM)
         let nhnnToggleMatch = true;
-        if (p.nhnn && !showNhnnMarkers) {
-             nhnnToggleMatch = false;
+        if (p.nhnn) { 
+             if (!showNhnnMarkers) {
+                 nhnnToggleMatch = false; // Ẩn điểm NHNN
+             }
+        } else { 
+             nhnnToggleMatch = true; // PGD/ATM luôn được hiển thị (trừ khi bị lọc bởi các filter khác)
         }
+
 
         // Final check: Tất cả điều kiện phải đúng
         p.isVisible = vungMatch && chiNhanhMatch && termidMatch && vuotHMMatch && pldgdMatch && nhomMatch && nhnnToggleMatch;
@@ -4885,10 +4823,7 @@ function applyFilter() {
     drawAllGroups(); 
     updateRankTable(); 
     
-    // Đồng bộ nhãn Term ID
-    if (typeof toggleTermIDLabels === 'function' && showTermIDLabels) {
-        toggleTermIDLabels(); 
-    }
+    // ✨ LỆNH GỌI TỰ ĐỘNG ĐỂ ĐỒNG BỘ TERMID ĐÃ BỊ XÓA BỎ Ở ĐÂY ✨
 }
 
         /**
@@ -4950,92 +4885,61 @@ function applyFilter() {
 
         }
 
-        /**
+/**
+ * (FINAL FIX VISIBILITY AND TERMID) Cập nhật hiển thị marker dựa trên bộ lọc VÀ chế độ Pin.
+ * Áp dụng logic TermID Tooltip trực tiếp.
+ */
+function updateMarkersVisibility() {
+    // 1. Xóa các Marker khỏi cả hai Layer Group
+    pointMarkersLayer.clearLayers();
+    nhnnMarkersLayer.clearLayers();
+
+    // 2. Lặp qua TẤT CẢ các điểm để kiểm tra và thêm/xóa chúng
+    allPoints.forEach(p => {
+        const marker = p.marker;
+        const tooltip = p.termIDTooltip;
         
-         * (SỬA LỚN) Cập nhật hiển thị marker dựa trên bộ lọc VÀ chế độ Pin.
+        const targetLayer = p.nhnn ? nhnnMarkersLayer : pointMarkersLayer;
         
-         * Đảm bảo ẩn các điểm PGD (không phải TSCN) khi ở chế độ Pin.
+        let shouldShowMarker = p.isVisible;
         
-         */
-
-        function updateMarkersVisibility() {
-            // --- 1. XỬ LÝ CÁC ĐIỂM PGD/ATM (CÓ GOM CỤM) ---
-            // 1a. Lấy danh sách marker PGD/ATM (KHÔNG phải NHNN) cần hiển thị
-
-            const visiblePgdMarkers = allPoints
-
-                .filter(p => !p.nhnn)
-
-                .filter(p => {
-
-                    // (*** LOGIC LỌC MỚI CHO CHẾ ĐỘ PIN ***)
-
-                    // ẨN TẤT CẢ CÁC ĐIỂM KHÔNG PHẢI TSCN KHI Ở CHẾ ĐỘ PIN
-
-                    if (isBatteryView && !p.isBatteryPoint) {
-
-                        return false;
-
-                    }
-
-                    // (*** KẾT THÚC LOGIC LỌC MỚI ***)
-                    // Giữ nguyên điều kiện lọc cũ (Filter UI)
-
-                    return p.isVisible;
-
-                })
-
-                .map(p => p.marker);
-            // 1b. Xóa các PGD/ATM marker cũ khỏi lớp đang hoạt động
-
-            pointMarkersLayer.clearLayers();
-            // 1c. Thêm marker PGD/ATM vào lại, tùy theo loại layer
-
-            if (isClusteringEnabled) {
-
-                pointMarkersLayer.addLayers(visiblePgdMarkers);
-
-            } else {
-
-                visiblePgdMarkers.forEach(marker => {
-
-                    pointMarkersLayer.addLayer(marker);
-
-                });
-
-            }
-            // --- 2. XỬ LÝ CÁC ĐIỂM NHNN (KHÔNG GOM CỤM) ---
-            // Lặp qua tất cả các điểm NHNN và ẩn/hiện chúng trên lớp cố định
-
-            allPoints.filter(p => p.nhnn).forEach(nhnnPoint => {
-
-                if (nhnnPoint.isVisible) {
-
-                    if (!nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
-
-                        nhnnMarkersLayer.addLayer(nhnnPoint.marker);
-
-                    }
-
-                } else {
-
-                    if (nhnnMarkersLayer.hasLayer(nhnnPoint.marker)) {
-
-                        if (nhnnPoint.marker.getTooltip()) {
-
-                            nhnnPoint.marker.unbindTooltip();
-
-                        }
-
-                        nhnnMarkersLayer.removeLayer(nhnnPoint.marker);
-
-                    }
-
-                }
-
-            });
-
+        // Logic bổ sung cho Chế độ Pin (chỉ hiển thị TSCN)
+        if (!p.nhnn && isBatteryView && !p.isBatteryPoint) {
+            shouldShowMarker = false;
         }
+
+        // 3. ÁP DỤNG HIỂN THỊ MARKER
+        if (shouldShowMarker) {
+            if (!targetLayer.hasLayer(marker)) {
+                targetLayer.addLayer(marker);
+            }
+            
+            // 4. QUẢN LÝ TERMID TOOLTIP TRỰC TIẾP
+            if (tooltip) {
+                if (showTermIDLabels) { // Kiểm tra trạng thái nút TermID
+                    tooltip.openOn(map); 
+                } else {
+                    map.closeTooltip(tooltip); 
+                }
+            }
+        } else {
+            // ẨN MARKER
+            if (targetLayer.hasLayer(marker)) {
+                 targetLayer.removeLayer(marker);
+            }
+            
+            // ✨ FIX TRỌNG YẾU: BUỘC ĐÓNG TOOLTIP KHI BỊ LỌC ẨN ✨
+            if (tooltip) {
+                 map.closeTooltip(tooltip);
+            }
+        }
+    });
+
+    // 5. Đảm bảo Marker Cluster refresh sau khi thay đổi (nếu đang bật)
+    if (isClusteringEnabled && clusterLayer.options.chunkedLoading) {
+        clusterLayer.refreshClusters();
+    }
+}
         // --- HẾT CỤM LOGIC LỌC v35 ---
 
 
@@ -5983,75 +5887,35 @@ function popup_createGroup(pointId) {
             });
 
         }
-        /**
-        
-         * (ĐÃ SỬA LỖI REMOVELAYER) Xóa toàn bộ đường phân tích (vòng tròn, polyline)
-        
-         */
+/**
+ * (FIX LỖI NHNN TOOLTIP) Xóa toàn bộ đường phân tích (vòng tròn, polyline).
+ * KHÔNG UNBIND TOOLTIP VĨNH VIỄN CỦA NHNN.
+ */
+function clearAnalysisVisuals() {
+    // ... (Phần xóa routing controls và measureLayer giữ nguyên) ...
 
-        function clearAnalysisVisuals() {
+    analysisLayer.clearLayers();
+    
+    // (FIX LỖI) Kiểm tra measureLayer có tồn tại trước khi dùng
+    if (measureLayer) { 
+        measureLayer.clearLayers(); 
+    }
 
-            allGroups.forEach(group => {
-
-                if (group.routingControls) {
-
-                    group.routingControls.forEach(router => {
-
-                        try {
-
-                            // Xóa control định tuyến
-
-                            map.removeControl(router);
-
-                        } catch (e) {
-
-                            // Xử lý lỗi nếu router đã bị xóa
-
-                        }
-
-                    });
-
-                    // Rất quan trọng: Xóa sạch mảng sau khi xóa khỏi map
-
-                    group.routingControls = [];
-
-                }
-
-            });
-            analysisLayer.clearLayers();
-            // (FIX LỖI) Kiểm tra measureLayer có tồn tại trước khi dùng
-
-            if (measureLayer) {
-
-                measureLayer.clearLayers();
-
-            }
-            allPoints.filter(p => p.isVisible).forEach(p => {
-
-                if (p.nhnn) { // Giữ nguyên icon NHNN
-
-                    p.marker.setIcon(createNHNNIcon());
-
-                } else if (p.groupId === null) { // Điểm chưa nhóm
-
-                    p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon());
-
-                } else if (p.groupId !== 'REFERENCE') { // Điểm đã vào nhóm (không phải NHNN)
-
-                    // Reset về icon PGD/Pin
-
-                    p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon());
-
-                }
-                if (p.marker.getTooltip()) {
-
-                    p.marker.unbindTooltip();
-
-                }
-
-            });
-
+    allPoints.filter(p => p.isVisible).forEach(p => {
+        if (p.nhnn) { // Giữ nguyên icon NHNN
+             p.marker.setIcon(createNHNNIcon());
+        } else if (p.groupId === null) { // Điểm chưa nhóm
+             p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
+        } else if (p.groupId !== 'REFERENCE') { // Điểm đã vào nhóm (không phải NHNN)
+             // Reset về icon PGD/Pin
+             p.marker.setIcon(isBatteryView ? createBatteryIcon(p) : createPGDIcon()); 
         }
+        
+        // ✨ LOGIC ĐÃ SỬA: CHỈ XÓA TOOLTIP NẾU NÓ KHÔNG PHẢI LÀ TERMID TOOLTIP ✨
+        // (Chúng ta không cần xóa TermID Tooltip ở đây vì nó được điều khiển bởi toggleTermIDLabels)
+        // DÒNG BÊN DƯỚI ĐÃ BỊ XÓA (p.marker.unbindTooltip();)
+    });
+}
 
 
         /**
@@ -6590,58 +6454,38 @@ function popup_createGroup(pointId) {
                 });
 
         }
-        /**
-       
-        * (SỬA LỚN) Bật/Tắt chế độ Pin và áp dụng bộ lọc hiển thị.
-       
-        */
-
-        function toggleBatteryView() {
-
-            isBatteryView = !isBatteryView;
-
-            const button = document.getElementById('battery-toggle-btn');
-            if (isBatteryView) {
-
-                button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
-
-                button.classList.add('battery-mode');
-
-                button.classList.remove('pin-mode');
-
-                showToast("Đã BẬT: Chế độ Pin", 'info');
-                // YÊU CẦU MỚI: ẨN CÁC ĐƯỜNG PHÂN TÍCH (Vòng tròn Hub & Routing)
-
-                if (analysisLayer) analysisLayer.clearLayers();
-
-                if (measureLayer) measureLayer.clearLayers();
-            } else {
-
-                button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
-
-                button.classList.add('pin-mode');
-
-                button.classList.remove('battery-mode');
-
-                showToast("Đã TẮT: Chế độ Pin", 'warning');
-
-            }
-            // (*** QUAN TRỌNG: Gọi hàm lọc mới để ẩn các chấm ghim ***)
-
-            updateMarkersVisibility();
-
-            // ----------------------------------------------------
-            // Vẽ lại toàn bộ map để cập nhật icon (và vẽ lại layer analysis nếu Tắt Pin)
-
-            drawAllGroups();
-
-            clearPreview();
-
-            // (MỚI v39) Cập nhật Bảng Xếp Hạng (để ẩn nó đi khi bật Pin)
-
-            updateRankTable();
-
-        }
+/**
+ * (FIX ĐỒNG BỘ TERMID) Bật/Tắt chế độ Pin và áp dụng bộ lọc hiển thị.
+ */
+function toggleBatteryView() {
+    isBatteryView = !isBatteryView;
+    const button = document.getElementById('battery-toggle-btn');
+     
+    if (isBatteryView) {
+        button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
+        button.classList.add('battery-mode');
+        button.classList.remove('pin-mode');
+        showToast("Đã BẬT: Chế độ Pin", 'info');
+         
+        // YÊU CẦU MỚI: ẨN CÁC ĐƯỜNG PHÂN TÍCH (Vòng tròn Hub & Routing)
+        if (analysisLayer) analysisLayer.clearLayers();
+        if (measureLayer) measureLayer.clearLayers();
+         
+    } else {
+        button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
+        button.classList.add('pin-mode');
+        button.classList.remove('battery-mode');
+        showToast("Đã TẮT: Chế độ Pin", 'warning');
+    }
+     
+    // ✨ GỌI APPLY FILTER để cập nhật p.isVisible và kích hoạt TermID đồng bộ ✨
+    applyFilter();
+     
+    // Vẽ lại toàn bộ map (drawAllGroups sẽ chạy sau applyFilter)
+    drawAllGroups();
+    clearPreview();
+    updateRankTable();
+}
         // *** Tự động gọi hàm tải dữ liệu sau khi map khởi tạo ***
         loadPreloadedData();
 
