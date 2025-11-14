@@ -15,6 +15,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.8.5/dist/dotlottie-wc.js" type="module"></script>
     <style>
         /* KHỐI STYLE CỦA BẠN (SỬA ĐỔI RẤT ÍT) */
         html,
@@ -1479,10 +1480,97 @@
                 opacity: 0.0;
             }
         }
+
+        /* CSS cho Màn Hình Loading */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Đảm bảo màn hình hiển thị toàn bộ viewport */
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Căn giữa toàn bộ nội dung */
+
+            z-index: 9999;
+
+            /* TRẠNG THÁI ẨN/HIỆN (Dùng lớp 'visible' để hiển thị) */
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .loading-screen.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .loading-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+
+            /* 1. NỀN MỜ (SEMI-TRANSPARENT OVERLAY) */
+            background-color: rgba(0, 0, 0, 0.4);
+            /* Màu đen nhẹ trong suốt (20% opacity) */
+
+            /* 2. HIỆU ỨNG BLUR QUAN TRỌNG (Blur ảnh nền phía sau) */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            /* Hỗ trợ Safari */
+        }
+
+        .loading-content {
+            position: relative;
+            /* Đảm bảo nội dung nổi trên lớp background */
+            z-index: 10000;
+            text-align: center;
+
+            /* Cung cấp nền trắng mờ cho nội dung để dễ đọc hơn */
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Cập nhật style cho Lottie Player */
+        #loadingAnimation {
+            /* Đảm bảo Lottie Player được hiển thị là block */
+            display: block;
+            margin: 0 auto 15px auto;
+            /* Căn giữa Lottie và tạo khoảng cách dưới */
+            width: 80px;
+            height: 80px;
+        }
+
+        #loadingText {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.1em;
+            color: #333;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-background"></div>
+        <div id="loadingContent" class="loading-content">
+            <dotlottie-wc id="loadingAnimation"
+                src="https://lottie.host/d446a9ec-3c6a-4972-8867-a22b1a98a52b/pywJYiMejV.lottie"
+                style="width: 80px; height: 80px; margin-bottom: 15px;" autoplay loop>
+            </dotlottie-wc>
+            <div id="loadingText" class="loading-text">Đang tải dữ liệu...</div>
+        </div>
+    </div>
+    </div>
     <div id="map"></div>
     <div id="rank-table-container">
         <div id="rank-table-header">
@@ -1592,11 +1680,36 @@
             <label for="blur-slider">Độ nhòe (Blur): 0 px</label>
             <input type="range" id="blur-slider" min="0" max="10" step="0.5" value="0">
         </div>
-        <div id="cascading-filter-container">
-        </div>
+<div id="cascading-filter-container">
+    <button id="apply-filter-btn" 
+        onclick="applyFilter()"
+        class="w-full mt-4 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-semibold transition duration-150 ease-in-out">
+        <i class="fa-solid fa-filter mr-1"></i> ÁP DỤNG LỌC
+    </button>
+    
+    <button id="reset-cascading-filter-btn">
+        <i class="fa-solid fa-filter-circle-xmark"></i> Xóa Lọc
+    </button>
+</div>
     </div>
 
     <script>
+        // Global variable
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingAnimation = document.getElementById('loadingAnimation');
+        const loadingText = loadingScreen.querySelector('.loading-text');
+
+        function showLoadingScreen(lottieSrc = 'https://lottie.host/d446a9ec-3c6a-4972-8867-a22b1a98a52b/pywJYiMejV.lottie', text = 'Đang xử lý...') {
+            if (loadingScreen) {
+                if (loadingAnimation) loadingAnimation.src = lottieSrc;
+                if (loadingText) loadingText.textContent = text;
+                loadingScreen.classList.add('visible');
+            }
+        }
+
+        function hideLoadingScreen() {
+            if (loadingScreen) loadingScreen.classList.remove('visible');
+        }
         /**
          * Lưu dữ liệu bản đồ lên SharePoint thông qua RPA Flow.
          * Xuất dữ liệu nhóm (tương tự exportGroupsData) cùng với allPoints và metadata.
@@ -1673,169 +1786,117 @@
          */
 
         function loadData() {
-            // URL Flow đã cung cấp
             const LOAD_FLOW_URL = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/59e0b2176e17419ca76c5718ee30a172/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xJAKlTazxzkypaF1yhUDN-5AtQZYy5wyaAKgdmh9m_g&load';
-            try {
-                showToast("Đang tải dữ liệu từ SharePoint...", 'info');
-                console.log("--- BẮT ĐẦU LOAD DATA TỪ FLOW ---");
 
-                fetch(LOAD_FLOW_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+            showToast("Đang tải dữ liệu nhóm từ Flow...", 'info');
+
+            return fetch(LOAD_FLOW_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => {
+                    // KHÔNG CÓ hideLoadingScreen() ở đây nữa
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message || response.statusText); });
                     }
+                    return response.json();
                 })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(err => { throw new Error(err.message || response.statusText); });
+                .then(loadedData => {
+                    // --- Bắt đầu Logic Tái tạo Nhóm ---
+                    allPoints.forEach(p => p.groupId = null);
+
+                    let groupsToProcess;
+                    if (Array.isArray(loadedData)) {
+                        groupsToProcess = loadedData;
+                    } else if (loadedData && (loadedData.groups || loadedData.allPoints)) {
+                        groupsToProcess = Array.isArray(loadedData.groups) ? loadedData.groups : loadedData.groups ? Object.values(loadedData.groups) : [];
+                        if (loadedData.metadata && typeof loadedData.metadata.RADIUS_METERS !== 'undefined') {
+                            RADIUS_METERS = Number(loadedData.metadata.RADIUS_METERS);
+                            currentRadiusKm = RADIUS_METERS / 1000;
+                            if (typeof setupRadiusControl === 'function') setupRadiusControl();
                         }
-                        return response.json();
-                    })
-                    .then(loadedData => {
-                        console.log("1. Phản hồi Flow (Raw LoadedData):", loadedData);
-
-                        let groupsToProcess;
-
-                        // Xử lý Trường hợp Flow trả về MẢNG THÔ (như log bạn cung cấp)
-                        if (Array.isArray(loadedData)) {
-                            groupsToProcess = loadedData;
-                            console.warn("Dữ liệu Flow là mảng thô. Sử dụng AllPoints gốc đã tải từ Power Automate.");
-
-                        } else if (loadedData && (loadedData.groups || loadedData.allPoints)) {
-                            // Xử lý Trường hợp Flow trả về OBJECT ĐẦY ĐỦ
-                            groupsToProcess = Array.isArray(loadedData.groups)
-                                ? loadedData.groups
-                                : loadedData.groups ? Object.values(loadedData.groups) : [];
-
-                            // (TÙY CHỌN: Cập nhật metadata nếu có)
-                            if (loadedData.metadata && typeof loadedData.metadata.RADIUS_METERS !== 'undefined') {
-                                RADIUS_METERS = Number(loadedData.metadata.RADIUS_METERS);
-                                currentRadiusKm = RADIUS_METERS / 1000;
-                                if (typeof setupRadiusControl === 'function') setupRadiusControl();
-                            }
-
-                            // CẬP NHẬT TRẠNG THÁI allPoints (Nếu Flow có trả về allPoints)
-                            if (loadedData.allPoints && Array.isArray(loadedData.allPoints)) {
-                                console.log("2. Cập nhật trạng thái nhóm (groupId) cho AllPoints từ Flow...");
-                                loadedData.allPoints.forEach(loadedP => {
-                                    const existingP = allPoints.find(p => p.id === loadedP.id);
-                                    if (existingP) {
-                                        existingP.groupId = loadedP.groupId || null;
-                                        existingP.isHub = loadedP.isHub || false;
-                                        existingP.isBatteryPoint = loadedP.isBatteryPoint || false;
-                                        // ... (Các thuộc tính khác như latlng, tenHub nếu cần cập nhật)
-                                    }
-                                });
-                            } else {
-                                console.warn("2. Không có dữ liệu allPoints trong phản hồi Flow để cập nhật trạng thái nhóm.");
-                            }
-                        } else {
-                            showToast("Không tìm thấy dữ liệu đã lưu hoặc dữ liệu rỗng. Bắt đầu với trạng thái mới.", 'warning');
-                            return;
-                        }
-
-                        // Đặt lại groupId cho tất cả điểm TRƯỚC khi tái tạo (Quan trọng)
-                        allPoints.forEach(p => p.groupId = null);
-
-                        // ==============================================================
-                        // ✨ LOG KIỂM TRA TRƯỚC KHI TÁI TẠO ✨
-                        console.log("--- DEBUG LOG: loadData() (Trước tái tạo) ---");
-                        console.log(`[LOAD] allPoints có ${allPoints.length} điểm. Sẵn sàng phục hồi.`);
-                        const unassignedPointsCount = allPoints.filter(p => p.groupId === null && !p.nhnn).length;
-                        console.log(`[LOAD] Số điểm PGD/ATM chưa được gán nhóm ban đầu: ${unassignedPointsCount}`);
-                        console.log("----------------------------------------------");
-                        // ==============================================================
-
-                        // --- 3. TÁI TẠO CẤU TRÚC NHÓM ---
-                        allGroups = [];
-                        groups = {};
-                        let loadCount = 0;
-
-                        console.log(`3. Bắt đầu Tái tạo ${groupsToProcess.length} Nhóm...`);
-
-                        groupsToProcess.forEach(savedGroup => {
-                            const centerPointObj = savedGroup.center_point;
-                            if (!centerPointObj || !centerPointObj.id) {
-                                console.error(`LỖI: Nhóm ${savedGroup.group_id} thiếu center_point.id. Bỏ qua.`);
-                                return;
-                            }
-
-                            const centerPointId = centerPointObj.id;
-                            // Lấy điểm trung tâm từ danh sách điểm gốc đã được tải (allPoints)
-                            const centerPointData = allPoints.find(p => p.id === centerPointId);
-
-                            if (!centerPointData) {
-                                console.warn(`[Cảnh báo] Nhóm ${savedGroup.group_id}: Tâm Hub "${centerPointId}" không tồn tại trong AllPoints gốc. Bỏ qua nhóm.`);
-                                return;
-                            }
-
-                            // Tái tạo cấu trúc nhóm (giữ nguyên logic phục hồi)
-                            const newGroup = {
-                                id: savedGroup.group_id,
-                                centerPoint: centerPointData,
-                                color: savedGroup.color,
-                                groupNumber: savedGroup.group_number,
-                                routingControls: savedGroup.routingControls || [],
-                                polylineCache: savedGroup.polyline_cache || {},
-                                fixedRadiusMeters: Number(savedGroup.fixedRadiusMeters) || RADIUS_METERS,
-                                fixedRadiusKm: Number(savedGroup.fixedRadiusKm) || currentRadiusKm,
-                                points: []
-                            };
-
-                            const memberIds = savedGroup.member_ids;
-                            const pointsInGroup = [];
-
-                            centerPointData.groupId = savedGroup.group_id;
-                            pointsInGroup.push(centerPointData);
-
-                            memberIds.forEach(memberId => {
-                                if (memberId === centerPointId) return;
-                                const memberPoint = allPoints.find(p => p.id === memberId);
-                                if (memberPoint) {
-                                    memberPoint.groupId = savedGroup.group_id;
-                                    pointsInGroup.push(memberPoint);
+                        if (loadedData.allPoints && Array.isArray(loadedData.allPoints)) {
+                            loadedData.allPoints.forEach(loadedP => {
+                                const existingP = allPoints.find(p => p.id === loadedP.id);
+                                if (existingP) {
+                                    existingP.groupId = loadedP.groupId || null;
+                                    existingP.isHub = loadedP.isHub || false;
+                                    existingP.isBatteryPoint = loadedP.isBatteryPoint || false;
                                 }
                             });
+                        }
+                    } else {
+                        showToast("Không tìm thấy dữ liệu đã lưu hoặc dữ liệu rỗng.", 'warning');
+                        // Nếu không có dữ liệu, vẫn ẩn loading.
+                        hideLoadingScreen(); // ✨ VỊ TRÍ ẨN 1/2 (Không có dữ liệu) ✨
+                        return;
+                    }
 
-                            newGroup.points = pointsInGroup;
-                            allGroups.push(newGroup);
+                    allGroups = [];
+                    groups = {};
+                    let loadCount = 0;
 
-                            groups[`NHÓM ${newGroup.groupNumber}`] = {
-                                id: newGroup.id,
-                                color: newGroup.color,
-                                pointIds: memberIds
-                            };
-                            loadCount++;
+                    groupsToProcess.forEach(savedGroup => {
+                        const centerPointObj = savedGroup.center_point;
+                        const centerPointId = centerPointObj.id;
+                        const centerPointData = allPoints.find(p => p.id === centerPointId);
+
+                        if (!centerPointData) { return; }
+
+                        const newGroup = {
+                            id: savedGroup.group_id,
+                            centerPoint: centerPointData,
+                            color: savedGroup.color,
+                            groupNumber: savedGroup.group_number,
+                            routingControls: savedGroup.routingControls || [],
+                            polylineCache: savedGroup.polyline_cache || {},
+                            fixedRadiusMeters: Number(savedGroup.fixedRadiusMeters) || RADIUS_METERS,
+                            fixedRadiusKm: Number(savedGroup.fixedRadiusKm) || currentRadiusKm,
+                            points: []
+                        };
+
+                        const memberIds = savedGroup.member_ids;
+                        const pointsInGroup = [];
+                        centerPointData.groupId = savedGroup.group_id;
+                        pointsInGroup.push(centerPointData);
+
+                        memberIds.forEach(memberId => {
+                            if (memberId === centerPointId) return;
+                            const memberPoint = allPoints.find(p => p.id === memberId);
+                            if (memberPoint) {
+                                memberPoint.groupId = savedGroup.group_id;
+                                pointsInGroup.push(memberPoint);
+                            }
                         });
-                        console.log(`4. Tái tạo thành công ${allGroups.length} Nhóm.`);
 
-                        // ==============================================================
-                        // ✨ LOG KIỂM TRA SAU KHI TÁI TẠO ✨
-                        console.log("--- DEBUG LOG: loadData() (Sau tái tạo) ---");
-                        const finalAssignedPoints = allPoints.filter(p => p.groupId !== null && p.groupId !== 'REFERENCE').length;
-                        console.log(`[LOAD] Tổng số điểm PGD/ATM đã được gán nhóm sau phục hồi: ${finalAssignedPoints}`);
-                        console.log("--------------------------------------------");
-                        // ==============================================================
+                        newGroup.points = pointsInGroup;
+                        allGroups.push(newGroup);
 
-                        // --- 4. VẼ LẠI BẢN ĐỒ ---
-                        applyFilter();
-                        drawAllGroups();
-                        updateRankTable();
-                        updateFilterOptions();
-
-                        // 5. Hoàn tất
-                        console.log("--- KẾT THÚC LOAD DATA ---");
-                        showToast(`✅ Tải và khôi phục ${allGroups.length} nhóm thành công!`, 'success');
-
-                    })
-                    .catch(error => {
-                        console.error("Lỗi khi tải dữ liệu:", error);
-                        showToast(`Lỗi khi tải dữ liệu: ${error.message}`, 'error');
+                        groups[`NHÓM ${newGroup.groupNumber}`] = {
+                            id: newGroup.id,
+                            color: newGroup.color,
+                            pointIds: memberIds
+                        };
+                        loadCount++;
                     });
-            } catch (e) {
-                console.error("Lỗi Fetch/Deserialize:", e);
-                showToast("Lỗi hệ thống khi cố gắng kết nối.", 'error');
-            }
+
+                    applyFilter();
+                    drawAllGroups(); // Đảm bảo tất cả nhóm được vẽ xong
+                    updateRankTable();
+                    updateFilterOptions();
+
+                    showToast(`✅ Tải và khôi phục ${allGroups.length} nhóm thành công!`, 'success');
+
+                    // ✨ VỊ TRÍ ẨN 2/2 (Hoàn thành thành công) ✨
+                    hideLoadingScreen();
+                })
+                .catch(error => {
+                    // Đảm bảo ẩn loading nếu có lỗi ở bất kỳ bước nào
+                    hideLoadingScreen();
+                    console.error("Lỗi khi tải dữ liệu nhóm:", error);
+                    showToast(`Lỗi khi tải dữ liệu nhóm: ${error.message}`, 'error');
+                    return Promise.reject(error);
+                });
         }
         /**
  * (FIXED LOGGING) Tự động tạo nhóm (vòng tròn bán kính) dựa trên N điểm đề xuất TỐT NHẤT trong Bảng xếp hạng.
@@ -2174,6 +2235,8 @@
          * BẮT BUỘC gọi applyFilter() để đồng bộ hóa.
          */
         function toggleTermIDLabels() {
+            // ✨ BẬT LOADING ✨
+    showLoadingScreen('https://lottie.host/e0b12a8f-22a4-4a8f-8898-15b5e39d0901/label_toggle.lottie', 'Đang thay đổi hiển thị TermID...');
             const button = document.getElementById('termid-toggle-btn');
             if (!button) return;
 
@@ -2192,6 +2255,10 @@
 
             // 2. ✨ GỌI APPLY FILTER để buộc tất cả Tooltip được mở/đóng theo trạng thái nút mới ✨
             applyFilter();
+            // ✨ ẨN LOADING SAU KHI VẼ XONG ✨
+    setTimeout(() => { 
+        hideLoadingScreen(); 
+    }, 300);
         }
         /**
         
@@ -3162,6 +3229,9 @@
          * Cập nhật trạng thái và gọi vẽ lại toàn bộ Groups.
          */
         function toggleDistanceLabels() {
+            // ✨ BẬT LOADING ✨
+            showLoadingScreen('https://lottie.host/e0b12a8f-22a4-4a8f-8898-15b5e39d0901/label_toggle.lottie', 'Đang cập nhật nhãn KM...');
+
             // 1. Đảo ngược trạng thái
             showDistanceLabels = !showDistanceLabels; // <-- Đảo ngược trạng thái showDistanceLabels
             const button = document.getElementById('labels-toggle-btn');
@@ -3187,6 +3257,10 @@
 
             // (Giữ nguyên logic của bạn về clearPreview)
             clearPreview();
+            // ✨ ẨN LOADING SAU KHI VẼ XONG ✨
+    setTimeout(() => { 
+        hideLoadingScreen(); 
+    }, 300);
         }
         // (*** SỬA v50 ***) Sửa logic Bật/Tắt (Không đóng menu ☰)
         function toggleRankPanel() {
@@ -3663,6 +3737,10 @@
         function loadPreloadedData() {
             const powerAutomateUrl = 'https://default460cecfbf0c64dd7a5ec66ef4d75ae.63.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/c7a3ba54b6604025882ae481816180bb/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=R88_MePGo47lYzv0ndIiVxbRUcMncU26zdMq9HGw9hs';
             showToast("Đang tải dữ liệu từ Power Automate...", 'info');
+
+            // ✨ BƯỚC 1: HIỂN THỊ LOADING SCREEN TẠI ĐÂY ✨
+            showLoadingScreen('https://lottie.host/d446a9ec-3c6a-4972-8867-a22b1a98a52b/pywJYiMejV.lottie', 'Đang tải dữ liệu điểm gốc...');
+
             fetch(powerAutomateUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3670,15 +3748,16 @@
             })
                 .then(response => {
                     if (!response.ok) {
+                        // Nếu lỗi ở bước 1, chúng ta phải ẩn loading và báo lỗi
+                        hideLoadingScreen();
                         throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                     }
                     return response.json();
                 })
                 .then(data => {
                     let bounds = L.latLngBounds();
-                    if (!Array.isArray(data)) {
-                        throw new Error("Dữ liệu nhận được không phải là một mảng (array)!");
-                    }
+                    // ... (Logic xử lý dữ liệu điểm ban đầu giữ nguyên) ...
+
                     data.forEach(item => {
                         const lat = parseFloat(String(item.LATITUDE).trim());
                         const lng = parseFloat(String(item.LONGITUDE).replace('S', '').trim());
@@ -3695,38 +3774,33 @@
                                 item.HMTQ_ngay,
                                 item.HUBYES,
                                 item.TENHUB,
-                                item.PL_DGD // <--- THAM SỐ THỨ 11 MỚI
+                                item.PL_DGD
                             );
                             bounds.extend(latlng);
                         } else {
                             console.warn("Bỏ qua điểm có tọa độ không hợp lệ:", item.TERMID);
                         }
                     });
+
                     buildCascadingFiltersUI();
                     showToast(`Đã tải ${data.length} điểm dữ liệu.`, 'success');
                     updateRankTable();
                     renderProposalList();
                     updateMarkersVisibility();
 
-                    // ==============================================================
-                    // ✨ LOG MỚI: KIỂM TRA SỐ LƯỢNG ĐIỂM GỐC VÀ DỮ LIỆU ĐIỂM ĐẦU TIÊN ✨
-                    console.log("--- DEBUG LOG: loadPreloadedData() ---");
-                    console.log(`[PRELOAD] Đã tải thành công ${allPoints.length} điểm vào allPoints.`);
-                    if (allPoints.length > 0) {
-                        console.log("[PRELOAD] Điểm đầu tiên (ví dụ):", allPoints[0]);
-                    }
-                    console.log("---------------------------------------");
-                    // ==============================================================
-
-                    loadData();
-                    /*loadGroupsFromLocalStorage();*/
                     if (bounds.isValid()) {
                         map.fitBounds(bounds.pad(0.1));
                     }
+
+                    // ✨ BƯỚC 2: TIẾN HÀNH TẢI DATA NHÓM (loadData) ✨
+                    return loadData(); // Trả về promise của loadData để chờ nó hoàn thành
+
                 })
                 .catch(error => {
+                    // Nếu có lỗi ở bất kỳ đâu trong chuỗi (trừ khi loadData xử lý lỗi của nó), ẩn loading
+                    hideLoadingScreen();
                     console.error('Lỗi khi tải dữ liệu từ Power Automate:', error);
-                    showToast(`Lỗi tải dữ liệu: ${error.message}`, 'error');
+                    showToast(`Lỗi tải dữ liệu ban đầu: ${error.message}`, 'error');
                     updateRankTable();
                     updateMarkersVisibility();
                 });
@@ -5195,15 +5269,22 @@
                     showToast("Không tải được viền bản đồ VN", "error");
                 });
         }
-        /**
-         * (SỬA LỖI XUNG ĐỘT TẦNG) Bật/Tắt chế độ Pin và áp dụng bộ lọc hiển thị.
-         * Đảm bảo xóa sạch các lớp phân tích và gọi applyFilter để đồng bộ p.isVisible.
-         */
         function toggleBatteryView() {
-            isBatteryView = !isBatteryView;
-            const button = document.getElementById('battery-toggle-btn');
+            // ✨ HIỂN THỊ LOADING SCREEN TRƯỚC KHI XỬ LÝ ✨
+            showLoadingScreen('https://lottie.host/583a54b3-d5f0-47a3-83f9-7156f4d2f00a/toggle_mode.lottie', 'Đang chuyển chế độ Pin/Ghim...');
 
-            // Đóng Popup hiện tại (nếu đang mở Popup Hành động)
+            const button = document.getElementById('battery-toggle-btn');
+            const rankButton = document.getElementById('rank-toggle-btn');
+            const autoGroupButton = document.getElementById('auto-group-btn');
+            const routingButton = document.getElementById('routing-toggle-btn');
+            const labelsButton = document.getElementById('labels-toggle-btn');
+            const saveButton = document.getElementById('save-groups-btn');
+
+            // Tăng tốc độ chuyển đổi bằng cách chạy các tác vụ nặng (filter/draw) ngay lập tức
+
+            isBatteryView = !isBatteryView;
+
+            // Đóng Popup hiện tại
             if (currentPopup) {
                 map.closePopup(currentPopup);
                 currentPopup = null;
@@ -5213,37 +5294,45 @@
                 button.innerHTML = '<i class="fa-solid fa-map-pin w-4 h-4"></i> <span class="button-text">Chế độ Ghim</span>';
                 button.classList.add('battery-mode');
                 button.classList.remove('pin-mode');
-                showToast("Đã BẬT: Chế độ Pin", 'info');
 
-                // ✨ ĐẢM BẢO XÓA SẠCH VÒNG TRÒN, LINE PHÂN TÍCH VÀ CẢ ĐƯỜNG ĐO LƯỜNG ✨
                 clearAnalysisVisuals();
                 if (measureLayer) measureLayer.clearLayers();
 
-                // Ẩn Bảng Xếp Hạng khi ở chế độ Pin
+                // ẨN CÁC NÚT KHI Ở CHẾ ĐỘ PIN
                 const rankPanel = document.getElementById('rank-table-container');
-                const rankButton = document.getElementById('rank-toggle-btn');
                 if (rankPanel) rankPanel.style.display = 'none';
-                if (rankButton) rankButton.style.display = 'none'; // Ẩn nút 🏆
+
+                if (rankButton) rankButton.style.display = 'none';
+                if (autoGroupButton) autoGroupButton.style.display = 'none';
+                if (routingButton) routingButton.style.display = 'none';
+                if (labelsButton) labelsButton.style.display = 'none';
+                if (saveButton) saveButton.style.display = 'none';
+
+                showToast("Đã BẬT: Chế độ Pin", 'info');
 
             } else {
                 button.innerHTML = '<i class="fa-solid fa-battery-half w-4 h-4"></i> <span class="button-text">Chế độ Pin</span>';
                 button.classList.add('pin-mode');
                 button.classList.remove('battery-mode');
-                showToast("Đã TẮT: Chế độ Pin", 'warning');
 
-                // Hiện lại nút Bảng xếp hạng (để nó được cập nhật lại trạng thái)
-                const rankButton = document.getElementById('rank-toggle-btn');
+                // HIỆN LẠI CÁC NÚT KHI THOÁT CHẾ ĐỘ PIN
                 if (rankButton) rankButton.style.display = 'flex';
+                if (autoGroupButton) autoGroupButton.style.display = 'flex';
+                if (routingButton) routingButton.style.display = 'flex';
+                if (labelsButton) labelsButton.style.display = 'flex';
+                if (saveButton) saveButton.style.display = 'flex';
+
+                showToast("Đã TẮT: Chế độ Pin", 'warning');
             }
 
-            // GỌI APPLY FILTER để:
-            // 1. Cập nhật p.isVisible (ẩn các điểm PGD/ATM không phải TSCN nếu isBatteryView=true)
-            // 2. Gọi updateMarkersVisibility (chuyển đổi Icon sang Pin/PGD)
-            // 3. Gọi drawAllGroups (vẽ lại tâm/vệ tinh nếu isBatteryView=false, hoặc chỉ update icon nếu isBatteryView=true)
+            // GỌI APPLY FILTER / DRAW ALL GROUPS để cập nhật bản đồ ngay lập tức
             updateFilterOptions();
             applyFilter();
 
-            // KHÔNG CẦN GỌI updateRankTable() ở đây vì applyFilter() đã gọi nó.
+            // ✨ ẨN LOADING SAU KHI XỬ LÝ HOÀN TẤT (Dùng setTimeout để đảm bảo UI/DOM cập nhật xong) ✨
+            setTimeout(() => {
+                hideLoadingScreen();
+            }, 300);
         }
         // *** Tự động gọi hàm tải dữ liệu sau khi map khởi tạo ***
         loadPreloadedData();
